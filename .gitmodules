@@ -1,3 +1,6 @@
 [submodule "tensorflow"]
 	path = tensorflow
 	url = https://github.com/tensorflow/tensorflow.git
+[submodule "tensorflow-glove"]
+	path = tensorflow-glove
+	url = https://github.com/GradySimon/tensorflow-glove.git
