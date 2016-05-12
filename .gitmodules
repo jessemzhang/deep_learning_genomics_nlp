@@ -4,3 +4,6 @@
 [submodule "tensorflow-glove"]
 	path = tensorflow-glove
 	url = https://github.com/GradySimon/tensorflow-glove.git
+[submodule "char-rnn-tensorflow"]
+	path = char-rnn-tensorflow
+	url = https://github.com/sherjilozair/char-rnn-tensorflow.git
