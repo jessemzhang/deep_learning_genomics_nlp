@@ -32,6 +32,6 @@ def process_file(flname):
 	with open(json_name, 'w') as outfile:
 	    json.dump(dict_kmer, outfile)
 
-flnames = sorted([x for x in os.listdir() if x.endswith('.fastq.gz')])
+flnames = sorted([x for x in os.listdir(in_path) if x.endswith('.fastq.gz')])
 pool=mp.Pool(processes=32)
-pool.map(process_file,fltuple)
+pool.map(process_file,flnames)
