@@ -20,7 +20,16 @@ class Model():
         else:
             raise Exception("model type not supported: {}".format(args.model))
 
-        cell = cell_fn(args.rnn_size)
+        if args.activation == 'tanh':
+            cell_af = tanh
+        elif args.activation == 'sigmoid':
+            cell_af = sigmoid
+        elif args.activation == 'relu':
+            cell_af = tf.nn.relu
+        else:
+            raise Exception("activation function not supported: {}".format(args.activation))
+
+        cell = cell_fn(args.rnn_size,activation=cell_af)
 
         self.cell = cell = rnn_cell.MultiRNNCell([cell] * args.num_layers)
 
