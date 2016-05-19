@@ -28,6 +28,8 @@ def main():
                        help='minibatch size')
     parser.add_argument('--seq_length', type=int, default=50,
                        help='RNN sequence length')
+    parser.add_argument('--dropout', type=float, default=1.0,
+                       help='keep rate')
     parser.add_argument('--num_epochs', type=int, default=50,
                        help='number of epochs')
     parser.add_argument('--save_every', type=int, default=1000,
@@ -36,6 +38,8 @@ def main():
                        help='clip gradients at this value')
     parser.add_argument('--learning_rate', type=float, default=0.002,
                        help='learning rate')
+    parser.add_argument('--bidirectional', type=bool, default=False,
+                       help='1 or 0')
     parser.add_argument('--decay_rate', type=float, default=0.97,
                        help='decay rate for rmsprop')                       
     parser.add_argument('--init_from', type=str, default=None,
