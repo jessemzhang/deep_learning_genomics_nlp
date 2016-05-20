@@ -7,12 +7,12 @@
 
 from __future__ import division
 from __future__ import print_function
-import time
+import time,sys,os
 import numpy as np
 import tensorflow as tf
 
 class Config(object):
-    learning_rate = 1.0
+    learning_rate = 1.0e-3
     max_grad_norm = 5
     num_layers = 2
     num_steps = 1000 #(the entire length of the sequence for the dataset)
@@ -33,6 +33,7 @@ class EnhancerRNN(object):
     def __init__(self,config,vocab):
         self.config = config
         self.vocab = vocab
+        self.dropout = config.keep_prob
 
         # Placeholder variables
         self.input_data = tf.placeholder(tf.int32, [batch_size,num_steps])
@@ -41,7 +42,7 @@ class EnhancerRNN(object):
         with tf.device("/cpu:0"):
             embedding = tf.get_variable("embedding", [vocab.size,config.hidden_size])
             inputs = tf.nn.embedding_lookup(embedding, self.input_data)
-            inputs = tf.dropout(inputs, config.keep_prob)
+            inputs = tf.dropout(inputs, self.dropout)
         
         # The "Recurrent" part (only look at last output of the sequence)
         cell = tf.nn.rnn_cell.BasicLSTMCell(config.hidden_size)
@@ -58,7 +59,8 @@ class EnhancerRNN(object):
         # The prediction (softmax) part
         Ws = tf.get_variable("softmax_w", [config.hidden_size,vocab.size])
         bs = tf.get_variable("softmax_b", [vocab.size])
-        logits = tf.matmul(output,Ws) + bs
+        logits = tf.matmul(tf.nn.dropout(output,self.dropout),Ws) + bs
+        self.predictions = tf.argmax(logits,1)
 
         # Loss
         loss = tf.nn.softmax_cross_entropy_with_logits(logits,self.targets)
@@ -90,7 +92,7 @@ class EnhancerRNN(object):
         for step, (x,y) in enumerate(enhancer_iterator(data, labels, 
                                                        self.config.batch_size,
                                                        self.config.num_steps)):
-            cost,state = session.run([ self.cost, self.final_state ],
+            cost,state,_ = session.run([ self.cost, self.final_state, self.train_op ],
                                      { self.input_data: x,
                                        self.targets: y,
                                        self.initial_state: state })
@@ -103,8 +105,31 @@ class EnhancerRNN(object):
                        iters * self.config.batch_size / (time.time() - start_time)))
 
         return np.exp(costs / iters)
+
+    def predict(self, session, data, labels=None):
+        """ Make predictions from provided model. If labels is not none, calculate loss. """
         
-    def enhancer_iterator(self, data, batch_size, num_steps):
+        self.dropout = 1.0
+        losses,results = [],[]
+        examples = enhancer_iterator(data, labels, self.config.batch_size,
+                                         self.config.num_steps)
+        for step, (x,y) in enumerate(examples):
+            if y is not None:
+                cost, preds = session.run([self.cost, self.predictions],
+                                          {self.input_data: x,
+                                           self.targets: y,
+                                           self.initial_state: self.initial_state.eval()})
+                losses.append(loss)
+            else:
+                preds = session.run(self.predictions,
+                                    {self.input_data: x,
+                                     self.initial_state: self.initial_state.eval()})
+            predicted_indices = preds.argmax(axis=1)
+            results.extend(predicted_indices)
+        self.dropout = self.config.keep_prob
+        return np.mean(losses), results
+
+    def enhancer_iterator(self, data, labels, batch_size, num_steps):
         """
         Generate batch-size pointers on raw sequence data for minibatch iteration
         
@@ -125,17 +150,58 @@ class EnhancerRNN(object):
 
         # Map raw data to array of ints. if all sequences are the same length L, 
         # raw_data will be N-by-L
-        raw_data = np.array([seq(i) for i in data], dtype=np.int32)
-        data_len = len(raw_data)
-        batch_len = data_len // batch_size
+        mdata = np.array([seq(i) for i in data], dtype=np.int32)
+        num_batches = len(mdata) // batch_size
+        
         # data will have batch_len elements, each of size batch_size
-        data = np.zeros([batch_size,batch_len], dtype=np.int32)
-        for i in range(batch_size):
-            data[i] = raw_data[batch_len*i:batch_len*(i+1)]
+        # ASSUME FIXED SEQUENCE LENGTHS OFF 1000 FOR NOW (5/20/16)
+        for i in range(num_batches):
+            x = mdata[batch_size*i:batch_size*(i+1),:]
+            if labels is not None:
+                y = labels[batch_size*i:batch_size*(i_1)]
+            else:
+                y = None
+            yield(x,y)
 
-        epoch_size = (batch_len-1) // num_steps
-        if epoch_size == 0: print("ERROR: decrease batch_size or num_steps")
+if __name__ == "__main__":
+    if len(sys.argv < 2):
+        print("Need prefix for training/validation/testing datasets")
 
-        for i in range(epoch_size):
-            x = data[:,i*num_steps:(i+1)*num_steps]
-            y = labels[:,
+    train_data = np.loadtxt(sys.argv[1]+'.data.train.txt')
+    train_labels = np.loadtxt(sys.argv[1]+'.labels.train.txt')
+    valid_data = np.loadtxt(sys.argv[1]+'.data.valid.txt')
+    valid_labels = np.loadtxt(sys.argv[1]+'.labels.valid.txt')
+    test_data = np.loadtxt(sys.argv[1]+'.data.test.txt')
+    test_labels = np.loadtxt(sys.argv[1]+'.labels.test.txt')
+    config = Config()
+    vocab = CharLevelDNAVocab()
+
+    with tf.Graph().as_default(), tf.Session() as session:
+        initializer = tf.random_uniform_initializer(-0.01,0.01)
+        saver = tf.train.Saver()
+        best_val_loss = float('Inf')
+        best_val_epoch = 0
+
+        # Training
+        with tf.variable_scope("model",reuse=None, initializer=initializer):
+            m = EnhancerRNN(config=config,vocab=vocab)
+
+        tf.initialize_all_variables().run()
+
+        for i in range(config.max_epoch):
+            train_loss = m.run_epoch(session, train_data, train_labels)
+            print("Epoch: %d Train loss: %.3f" % (i+1,train_loss))
+            valid_loss,_ = m.predict(session, valid_data, valid_labels)
+            print("          Valid loss: %.3f" % (valid_loss))
+
+            if valid_loss < best_val_loss:
+                best_val_loss,best_val_epoch = valid_loss,i
+                os.system("mkdir -p weights")
+                saver.save(session, './weights/weights.epoch'+str(i)+'.best')
+            else:
+                saver.save(session, './weights/weights.epoch'+str(i))
+
+        saver.restore(session, './weights/weights.epoch'+str(best_val_epoch)+'.best')
+        print 'Test'
+        test_loss,test_predictions = m.predict(session, test_data, test_labels)
+        np.savetxt(sys.argv[1]+'.test.predictions.txt',test_predictions)
