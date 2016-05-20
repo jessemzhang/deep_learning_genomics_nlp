@@ -5,6 +5,8 @@
 #
 # Written by Jesse Zhang 5/19/2016
 
+from __future__ import division
+from __future__ import print_function
 import time
 import numpy as np
 import tensorflow as tf
@@ -13,7 +15,7 @@ class Config(object):
     learning_rate = 1.0
     max_grad_norm = 5
     num_layers = 2
-    num_steps = 200
+    num_steps = 1000 #(the entire length of the sequence for the dataset)
     hidden_size = 128
     max_epoch = 40
     keep_prob = 0.9
@@ -60,7 +62,8 @@ class EnhancerRNN(object):
 
         # Loss
         loss = tf.nn.softmax_cross_entropy_with_logits(logits,self.targets)
-        
+        self.cost = tf.reduce_sum(loss) / batch_size
+
         # Optimizer
         optimizer = tf.train.AdamOptimizer(config.learning_rate)
         train_op = optimizer.minimize(loss)
@@ -71,8 +74,8 @@ class EnhancerRNN(object):
         
         Args:
           session: tensorflow session
-          data: N-by-(sequence-length) matrix
-          labels: N-by-(#labels) matrix of one-hot labels
+          data: length N array of sequences
+          labels: length N array of labels (integers)
           verbose: self explanatory
 
         Returns:
@@ -84,8 +87,55 @@ class EnhancerRNN(object):
         costs = 0.0
         iters = 0
         state = self.initial_state.eval()
-        for step, (x,y) in enumerate(
+        for step, (x,y) in enumerate(enhancer_iterator(data, labels, 
+                                                       self.config.batch_size,
+                                                       self.config.num_steps)):
+            cost,state = session.run([ self.cost, self.final_state ],
+                                     { self.input_data: x,
+                                       self.targets: y,
+                                       self.initial_state: state })
+            costs += cost
+            iters += self.config.num_steps
+
+            if verbose and step % (epoch_size // 10) == 10:
+                print("%.3f perplexity: %.3f speed: %.0f wps" %
+                      (step * 1.0 / epoch_size, np.exp(costs / iters),
+                       iters * self.config.batch_size / (time.time() - start_time)))
+
+        return np.exp(costs / iters)
         
+    def enhancer_iterator(self, data, batch_size, num_steps):
+        """
+        Generate batch-size pointers on raw sequence data for minibatch iteration
         
+        Args:
+          data: length N array of sequences (nucleotides A C T G)
+          labels: length N array of labels (integers) for each sequence
+                  (the max value of this array = # of labels)
+          batch_size: int, the batch size
+          num_steps: int, number of unrolls
         
-        
+        Yields:
+          Pairs of the batched data, each a matrix of shape [batch_size, num_steps].
+          The second element of the tuple is the same data 
+          
+        """
+        def seq_to_ints(seq):
+            return [self.vocab.word_to_index[c] for c in seq]
+
+        # Map raw data to array of ints. if all sequences are the same length L, 
+        # raw_data will be N-by-L
+        raw_data = np.array([seq(i) for i in data], dtype=np.int32)
+        data_len = len(raw_data)
+        batch_len = data_len // batch_size
+        # data will have batch_len elements, each of size batch_size
+        data = np.zeros([batch_size,batch_len], dtype=np.int32)
+        for i in range(batch_size):
+            data[i] = raw_data[batch_len*i:batch_len*(i+1)]
+
+        epoch_size = (batch_len-1) // num_steps
+        if epoch_size == 0: print("ERROR: decrease batch_size or num_steps")
+
+        for i in range(epoch_size):
+            x = data[:,i*num_steps:(i+1)*num_steps]
+            y = labels[:,
