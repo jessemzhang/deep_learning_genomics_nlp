@@ -62,8 +62,8 @@ class EnhancerRNN(object):
         logits = tf.matmul(tf.nn.dropout(output,self.dropout),Ws) + bs
         self.predictions = tf.argmax(logits,1)
 
-        # Loss
-        loss = tf.nn.softmax_cross_entropy_with_logits(logits,self.targets)
+        # Loss ("sparse" version of this function requires mutually exclusive classes)
+        loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits,self.targets)
         self.cost = tf.reduce_sum(loss) / batch_size
 
         # Optimizer
