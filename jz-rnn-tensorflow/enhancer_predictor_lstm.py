@@ -193,7 +193,8 @@ if __name__ == "__main__":
         tf.initialize_all_variables().run()
 
         for i in range(config.max_epoch):
-            print("="*80,'\n','Epoch %d' %(i))
+            print("="*80)
+            print('Epoch %d' %(i))
             train_loss = m.run_epoch(session, train_data, train_labels)
             print("Train loss: %.3f" % (train_loss))
             valid_loss,_ = m.predict(session, valid_data, valid_labels)
