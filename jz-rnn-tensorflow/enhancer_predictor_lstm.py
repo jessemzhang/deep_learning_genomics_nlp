@@ -156,8 +156,8 @@ class EnhancerRNN(object):
         # data will have batch_len elements, each of size batch_size
         # ASSUME FIXED SEQUENCE LENGTHS OFF 1000 FOR NOW (5/20/16)
         # Just grab middle self.config.num_steps nucleotides
-        a = len(mdata(0,:))/2-self.config.num_steps/2 
-        b = len(mdata(0,:))/2+self.config.num_steps/2
+        a = len(mdata[0,:])/2-self.config.num_steps/2 
+        b = len(mdata[0,:])/2+self.config.num_steps/2
         for i in range(num_batches):
             x = mdata[batch_size*i:batch_size*(i+1),a:b]
             if labels is not None:
