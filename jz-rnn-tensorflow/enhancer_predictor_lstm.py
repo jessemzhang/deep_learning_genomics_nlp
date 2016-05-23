@@ -17,12 +17,12 @@ class Config(object):
     learning_rate = 1.0e-3
     max_grad_norm = 5
     num_layers = 2
-    num_steps = 10 #1000 #(the entire length of the sequence for the dataset)
+    num_steps = 20 #1000 #(the entire length of the sequence for the dataset)
     hidden_size = 128
-    max_epoch = 5 #40
+    max_epoch = 20 #40
     keep_prob = 0.9
     lr_decay = 0.8
-    batch_size = 8 #20
+    batch_size = 20 #20
     num_classes = 2 # CHANGE THIS IF MORE CLASSES
 
 class CharLevelDNAVocab(object):
@@ -155,8 +155,11 @@ class EnhancerRNN(object):
         
         # data will have batch_len elements, each of size batch_size
         # ASSUME FIXED SEQUENCE LENGTHS OFF 1000 FOR NOW (5/20/16)
+        # Just grab middle self.config.num_steps nucleotides
+        a = len(mdata(0,:))/2-self.config.num_steps/2 
+        b = len(mdata(0,:))/2+self.config.num_steps/2
         for i in range(num_batches):
-            x = mdata[batch_size*i:batch_size*(i+1),0:self.config.num_steps]
+            x = mdata[batch_size*i:batch_size*(i+1),a:b]
             if labels is not None:
                 y = labels[batch_size*i:batch_size*(i+1)]
             else:
