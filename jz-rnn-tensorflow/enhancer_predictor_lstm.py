@@ -19,10 +19,10 @@ class Config(object):
     num_layers = 2
     num_steps = 10 #1000 #(the entire length of the sequence for the dataset)
     hidden_size = 128
-    max_epoch = 40
+    max_epoch = 5 #40
     keep_prob = 0.9
     lr_decay = 0.8
-    batch_size = 4 #20
+    batch_size = 8 #20
 
 class CharLevelDNAVocab(object):
     size = 4
@@ -203,10 +203,10 @@ if __name__ == "__main__":
             if valid_loss < best_val_loss:
                 best_val_loss,best_val_epoch = valid_loss,i
                 saver.save(session, './weights/weights.epoch'+str(i)+'.best')
-            else:
-                saver.save(session, './weights/weights.epoch'+str(i))
+            
+            saver.save(session, './weights/weights.epoch'+str(i))
 
         saver.restore(session, './weights/weights.epoch'+str(best_val_epoch)+'.best')
-        print('Test')
         test_loss,test_predictions = m.predict(session, test_data, test_labels)
-        np.savetxt(sys.argv[1]+'.test.predictions.txt',test_predictions)
+        print("="*80)
+        print("Test loss: %.3f" % (test_loss))
