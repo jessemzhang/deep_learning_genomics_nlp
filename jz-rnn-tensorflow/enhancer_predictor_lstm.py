@@ -19,11 +19,13 @@ class Config(object):
     num_layers = 2
     num_steps = 10 #1000 #(the entire length of the sequence for the dataset)
     hidden_size = 128
-    max_epoch = 10 #40
     keep_prob = 0.9
-    lr_decay = 0.8
+    max_epoch = 40
+    epochs_with_initial_lr = 20
+    lr_decay = 0.5
     batch_size = 8 # 20
     num_classes = 2 # CHANGE THIS IF MORE CLASSES
+    early_stopping = 3
 
 class CharLevelDNAVocab(object):
     size = 4
@@ -41,15 +43,18 @@ class EnhancerRNN(object):
         # Placeholder variables
         self.input_data = tf.placeholder(tf.int32, [config.batch_size,config.num_steps])
         self.targets = tf.placeholder(tf.int32, [config.batch_size])
+        self.dropout = tf.placeholder(tf.float32)
 
         with tf.device("/cpu:0"):
             embedding = tf.get_variable("embedding", [vocab.size,config.hidden_size])
             inputs = tf.nn.embedding_lookup(embedding, self.input_data)
-            inputs = tf.nn.dropout(inputs, self.dropout)
         
         # The "Recurrent" part (only look at last output of the sequence)
         cell = tf.nn.rnn_cell.BasicLSTMCell(config.hidden_size)
         cell = tf.nn.rnn_cell.MultiRNNCell([cell]*config.num_layers)
+        cell = tf.nn.rnn_cell.DropoutWrapper(cell,
+                                             input_keep_prob = self.dropout,
+                                             output_keep_prob = self.dropout)
         self.initial_state = cell.zero_state(config.batch_size, tf.float32)
         state = self.initial_state
         with tf.variable_scope("RNN"):
@@ -62,17 +67,22 @@ class EnhancerRNN(object):
         # The prediction (softmax) part
         Ws = tf.get_variable("softmax_w", [config.hidden_size,config.num_classes])
         bs = tf.get_variable("softmax_b", [config.num_classes])
-        logits = tf.matmul(tf.nn.dropout(output,self.dropout),Ws) + bs
+        logits = tf.matmul(output,Ws) + bs
         self.predictions = tf.nn.softmax(logits)
 
         # Loss ("sparse" version of this function requires mutually exclusive classes)
         loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits,self.targets)
         self.cost = tf.reduce_sum(loss) / config.batch_size
 
-        # Optimizer
-        optimizer = tf.train.AdamOptimizer(learning_rate=config.learning_rate)
+        # Optimizer (learning rate will be assigned using assign_lr)
+        self.lr = tf.Variable(0.0, trainable=False)
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.lr) 
         self.train_op = optimizer.minimize(loss)
 
+    def assign_lr(self, session, lr):
+        """ Update learning rate if needed (for adaptive learning rates) """
+        session.run(tf.assign(self.lr,lr))
+        
     def run_epoch(self, session, data, labels, verbose=True):
         """ 
         Train the model!
@@ -96,22 +106,23 @@ class EnhancerRNN(object):
             cost,state,_ = session.run([ self.cost, self.final_state, self.train_op ],
                                        { self.input_data: x,
                                          self.targets: y,
+                                         self.dropout: self.config.keep_prob,
                                          self.initial_state: state })
             costs += cost
 
-            if verbose and num_batches // 10 == 0:
+            if verbose and num_batches // 10 == 0: # In case num_batches < 10
                 print("batch %d of %d; perplexity: %.3f; time elapsed: %.3f s" %
                       (step+1, num_batches, np.exp(costs / (step+1)),time.time() - start_time))
             elif verbose and step % (num_batches // 10) == 0:
                 print("batch %d of %d; perplexity: %.3f; time elapsed: %.3f s" %
                       (step+1, num_batches, np.exp(costs / (step+1)),time.time() - start_time))
+            start_time = time.time()
         
         return np.exp(costs/num_batches)
 
     def predict(self, session, data, labels=None):
         """ Make predictions from provided model. If labels is not none, calculate loss. """
 
-        self.dropout = 1.0
         losses,results = [],[]
         for step, (x,y) in enumerate(self.enhancer_iterator(data, labels, 
                                                             self.config.batch_size,
@@ -120,15 +131,16 @@ class EnhancerRNN(object):
                 cost, preds = session.run([self.cost, self.predictions],
                                           {self.input_data: x,
                                            self.targets: y,
+                                           self.dropout: 1.0,
                                            self.initial_state: self.initial_state.eval()})
                 losses.append(cost)
             else:
                 preds = session.run(self.predictions,
                                     {self.input_data: x,
+                                     self.dropout: 1.0,
                                      self.initial_state: self.initial_state.eval()})
             
             results.extend(np.argmax(preds,1))
-        self.dropout = self.config.keep_prob
         return np.exp(np.mean(losses)), results
 
     def enhancer_iterator(self, data, labels, batch_size, num_steps):
@@ -192,6 +204,8 @@ if __name__ == "__main__":
         print('setting up model..')
         with tf.variable_scope("model",reuse=None, initializer=initializer):
             m = EnhancerRNN(config=config,vocab=vocab)
+        m.assign_lr(session, config.learning_rate)
+        lr = config.learning_rate
         print('model set up')
 
         saver = tf.train.Saver()
@@ -200,7 +214,7 @@ if __name__ == "__main__":
 
         for i in range(config.max_epoch):
             print("="*80)
-            print('Epoch %d' %(i))
+            print('Epoch %d with learning rate %.3f' %(i,lr))
             train_loss = m.run_epoch(session, train_data, train_labels)
             print("Train loss: %.3f" % (train_loss))
             valid_loss,valid_preds = m.predict(session, valid_data, valid_labels)
@@ -212,7 +226,12 @@ if __name__ == "__main__":
                 best_val_loss = valid_loss
                 best_val_epoch = i
                 saver.save(session, './weights/weights.epoch'+str(i)+'.best')
-            
+                
+            # If loss isn't getting better after a few iterations, decrease lr
+            if i-best_val_epoch > config.early_stopping:
+                lr = lr*config.lr_decay**(i-best_val_epoch)
+                m.assign_lr(session, lr)
+
             saver.save(session, './weights/weights.epoch'+str(i))
 
         saver.restore(session, './weights/weights.epoch'+str(best_val_epoch)+'.best')
