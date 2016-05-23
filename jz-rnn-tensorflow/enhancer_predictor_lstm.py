@@ -4,6 +4,8 @@
 #     http://deepsea.princeton.edu/media/code/deepsea_train_bundle.v0.9.tar.gz
 #
 # Written by Jesse Zhang 5/19/2016
+#
+# Usage: python enhancer_predictor_lstm.py DATA_PREFIX
 
 from __future__ import division
 from __future__ import print_function
@@ -15,12 +17,12 @@ class Config(object):
     learning_rate = 1.0e-3
     max_grad_norm = 5
     num_layers = 2
-    num_steps = 1000 #(the entire length of the sequence for the dataset)
+    num_steps = 10 #1000 #(the entire length of the sequence for the dataset)
     hidden_size = 128
     max_epoch = 40
     keep_prob = 0.9
     lr_decay = 0.8
-    batch_size = 20
+    batch_size = 4 #20
 
 class CharLevelDNAVocab(object):
     size = 4
@@ -36,24 +38,24 @@ class EnhancerRNN(object):
         self.dropout = config.keep_prob
 
         # Placeholder variables
-        self.input_data = tf.placeholder(tf.int32, [batch_size,num_steps])
-        self.targets = tf.placeholder(tf.int32, [batch_size])
+        self.input_data = tf.placeholder(tf.int32, [config.batch_size,config.num_steps])
+        self.targets = tf.placeholder(tf.int32, [config.batch_size])
 
         with tf.device("/cpu:0"):
             embedding = tf.get_variable("embedding", [vocab.size,config.hidden_size])
             inputs = tf.nn.embedding_lookup(embedding, self.input_data)
-            inputs = tf.dropout(inputs, self.dropout)
+            inputs = tf.nn.dropout(inputs, self.dropout)
         
         # The "Recurrent" part (only look at last output of the sequence)
         cell = tf.nn.rnn_cell.BasicLSTMCell(config.hidden_size)
         cell = tf.nn.rnn_cell.MultiRNNCell([cell]*config.num_layers)
-        self.initial_state = cell.zero_state(batch_size, tf.float32)
+        self.initial_state = cell.zero_state(config.batch_size, tf.float32)
         state = self.initial_state
         with tf.variable_scope("RNN"):
             for t in range(config.num_steps):
                 if t > 0:
                     tf.get_variable_scope().reuse_variables()
-                    (output, state) = cell(inputs[:,t,:], state)
+                (output, state) = cell(inputs[:,t,:], state)
         self.final_state = state
                     
         # The prediction (softmax) part
@@ -64,11 +66,11 @@ class EnhancerRNN(object):
 
         # Loss ("sparse" version of this function requires mutually exclusive classes)
         loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits,self.targets)
-        self.cost = tf.reduce_sum(loss) / batch_size
+        self.cost = tf.reduce_sum(loss) / config.batch_size
 
         # Optimizer
-        optimizer = tf.train.AdamOptimizer(config.learning_rate)
-        train_op = optimizer.minimize(loss)
+        optimizer = tf.train.AdamOptimizer(learning_rate=config.learning_rate)
+        self.train_op = optimizer.minimize(loss)
 
     def run_epoch(self, session, data, labels, verbose=True):
         """ 
@@ -83,27 +85,25 @@ class EnhancerRNN(object):
         Returns:
           Perplexity for this epoch
         """
-
-        epoch_size = ((len(data) // self.config.batch_size) - 1) // self.config.num_steps
-        state_time = time.time()
+        num_batches = (len(data) // self.config.batch_size)
+        start_time = time.time()
         costs = 0.0
         iters = 0
         state = self.initial_state.eval()
-        for step, (x,y) in enumerate(enhancer_iterator(data, labels, 
+        for step, (x,y) in enumerate(self.enhancer_iterator(data, labels, 
                                                        self.config.batch_size,
                                                        self.config.num_steps)):
             cost,state,_ = session.run([ self.cost, self.final_state, self.train_op ],
-                                     { self.input_data: x,
-                                       self.targets: y,
-                                       self.initial_state: state })
+                                       { self.input_data: x,
+                                         self.targets: y,
+                                         self.initial_state: state })
             costs += cost
             iters += self.config.num_steps
 
-            if verbose and step % (epoch_size // 10) == 10:
-                print("%.3f perplexity: %.3f speed: %.0f wps" %
-                      (step * 1.0 / epoch_size, np.exp(costs / iters),
-                       iters * self.config.batch_size / (time.time() - start_time)))
-
+            if verbose: # and step % (epoch_size // 10) == 10:
+                print("batch %d of %d; perplexity: %.3f; time elapsed: %.3f s" %
+                      (step+1, num_batches, np.exp(costs / iters),time.time() - start_time))
+                
         return np.exp(costs / iters)
 
     def predict(self, session, data, labels=None):
@@ -111,21 +111,20 @@ class EnhancerRNN(object):
         
         self.dropout = 1.0
         losses,results = [],[]
-        examples = enhancer_iterator(data, labels, self.config.batch_size,
-                                         self.config.num_steps)
-        for step, (x,y) in enumerate(examples):
+        for step, (x,y) in enumerate(self.enhancer_iterator(data, labels, 
+                                                            self.config.batch_size,
+                                                            self.config.num_steps)):
             if y is not None:
                 cost, preds = session.run([self.cost, self.predictions],
                                           {self.input_data: x,
                                            self.targets: y,
                                            self.initial_state: self.initial_state.eval()})
-                losses.append(loss)
+                losses.append(cost)
             else:
                 preds = session.run(self.predictions,
                                     {self.input_data: x,
                                      self.initial_state: self.initial_state.eval()})
-            predicted_indices = preds.argmax(axis=1)
-            results.extend(predicted_indices)
+            results.extend(preds)
         self.dropout = self.config.keep_prob
         return np.mean(losses), results
 
@@ -150,58 +149,63 @@ class EnhancerRNN(object):
 
         # Map raw data to array of ints. if all sequences are the same length L, 
         # raw_data will be N-by-L
-        mdata = np.array([seq(i) for i in data], dtype=np.int32)
+        mdata = np.array([seq_to_ints(i) for i in data], dtype=np.int32)
         num_batches = len(mdata) // batch_size
         
         # data will have batch_len elements, each of size batch_size
         # ASSUME FIXED SEQUENCE LENGTHS OFF 1000 FOR NOW (5/20/16)
         for i in range(num_batches):
-            x = mdata[batch_size*i:batch_size*(i+1),:]
+            x = mdata[batch_size*i:batch_size*(i+1),0:self.config.num_steps]
             if labels is not None:
-                y = labels[batch_size*i:batch_size*(i_1)]
+                y = labels[batch_size*i:batch_size*(i+1)]
             else:
                 y = None
             yield(x,y)
+        
 
 if __name__ == "__main__":
-    if len(sys.argv < 2):
+    if len(sys.argv)<2:
         print("Need prefix for training/validation/testing datasets")
+        sys.exit()
 
-    train_data = np.loadtxt(sys.argv[1]+'.data.train.txt')
+    train_data = np.loadtxt(sys.argv[1]+'.data.train.txt',dtype=str)
     train_labels = np.loadtxt(sys.argv[1]+'.labels.train.txt')
-    valid_data = np.loadtxt(sys.argv[1]+'.data.valid.txt')
+    valid_data = np.loadtxt(sys.argv[1]+'.data.valid.txt',dtype=str)
     valid_labels = np.loadtxt(sys.argv[1]+'.labels.valid.txt')
-    test_data = np.loadtxt(sys.argv[1]+'.data.test.txt')
+    test_data = np.loadtxt(sys.argv[1]+'.data.test.txt',dtype=str)
     test_labels = np.loadtxt(sys.argv[1]+'.labels.test.txt')
     config = Config()
     vocab = CharLevelDNAVocab()
 
     with tf.Graph().as_default(), tf.Session() as session:
         initializer = tf.random_uniform_initializer(-0.01,0.01)
-        saver = tf.train.Saver()
         best_val_loss = float('Inf')
         best_val_epoch = 0
-
+        
         # Training
+        print('setting up model..')
         with tf.variable_scope("model",reuse=None, initializer=initializer):
             m = EnhancerRNN(config=config,vocab=vocab)
+        print('model set up')
 
+        saver = tf.train.Saver()
+        os.system("mkdir -p weights")
         tf.initialize_all_variables().run()
 
         for i in range(config.max_epoch):
+            print("="*80,'\n','Epoch %d' %(i))
             train_loss = m.run_epoch(session, train_data, train_labels)
-            print("Epoch: %d Train loss: %.3f" % (i+1,train_loss))
+            print("Train loss: %.3f" % (train_loss))
             valid_loss,_ = m.predict(session, valid_data, valid_labels)
-            print("          Valid loss: %.3f" % (valid_loss))
+            print("Valid loss: %.3f" % (valid_loss))
 
             if valid_loss < best_val_loss:
                 best_val_loss,best_val_epoch = valid_loss,i
-                os.system("mkdir -p weights")
                 saver.save(session, './weights/weights.epoch'+str(i)+'.best')
             else:
                 saver.save(session, './weights/weights.epoch'+str(i))
 
         saver.restore(session, './weights/weights.epoch'+str(best_val_epoch)+'.best')
-        print 'Test'
+        print('Test')
         test_loss,test_predictions = m.predict(session, test_data, test_labels)
         np.savetxt(sys.argv[1]+'.test.predictions.txt',test_predictions)
