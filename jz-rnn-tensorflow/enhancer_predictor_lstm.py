@@ -23,6 +23,7 @@ class Config(object):
     keep_prob = 0.9
     lr_decay = 0.8
     batch_size = 8 #20
+    num_classes = 2 # CHANGE THIS IF MORE CLASSES
 
 class CharLevelDNAVocab(object):
     size = 4
@@ -59,10 +60,10 @@ class EnhancerRNN(object):
         self.final_state = state
                     
         # The prediction (softmax) part
-        Ws = tf.get_variable("softmax_w", [config.hidden_size,vocab.size])
-        bs = tf.get_variable("softmax_b", [vocab.size])
+        Ws = tf.get_variable("softmax_w", [config.hidden_size,config.num_classes])
+        bs = tf.get_variable("softmax_b", [config.num_classes])
         logits = tf.matmul(tf.nn.dropout(output,self.dropout),Ws) + bs
-        self.predictions = tf.argmax(logits,1)
+        self.predictions = tf.nn.softmax(logits)
 
         # Loss ("sparse" version of this function requires mutually exclusive classes)
         loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits,self.targets)
@@ -124,7 +125,7 @@ class EnhancerRNN(object):
                 preds = session.run(self.predictions,
                                     {self.input_data: x,
                                      self.initial_state: self.initial_state.eval()})
-            results.extend(preds)
+            results.extend(np.argmax(preds,1))
         self.dropout = self.config.keep_prob
         return np.mean(losses), results
 
@@ -197,8 +198,10 @@ if __name__ == "__main__":
             print('Epoch %d' %(i))
             train_loss = m.run_epoch(session, train_data, train_labels)
             print("Train loss: %.3f" % (train_loss))
-            valid_loss,_ = m.predict(session, valid_data, valid_labels)
-            print("Valid loss: %.3f" % (valid_loss))
+            valid_loss,valid_preds = m.predict(session, valid_data, valid_labels)
+            print("Valid loss: %.3f, error rate: %.3f" % 
+                  (valid_loss,sum(valid_labels[0:len(valid_preds)] != valid_preds)
+                   /float(len(valid_preds))))
 
             if valid_loss < best_val_loss:
                 best_val_loss,best_val_epoch = valid_loss,i
@@ -207,6 +210,8 @@ if __name__ == "__main__":
             saver.save(session, './weights/weights.epoch'+str(i))
 
         saver.restore(session, './weights/weights.epoch'+str(best_val_epoch)+'.best')
-        test_loss,test_predictions = m.predict(session, test_data, test_labels)
+        test_loss,test_preds = m.predict(session, test_data, test_labels)
         print("="*80)
-        print("Test loss: %.3f" % (test_loss))
+        print("Test loss: %.3f, error rate: %.3f" % 
+              (test_loss,sum(test_labels[:len(test_preds)] != test_preds)
+               /float(len(test_preds))))
