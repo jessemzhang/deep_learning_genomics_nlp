@@ -17,12 +17,12 @@ class Config(object):
     learning_rate = 1.0e-3
     max_grad_norm = 5
     num_layers = 2
-    num_steps = 20 #1000 #(the entire length of the sequence for the dataset)
+    num_steps = 10 #1000 #(the entire length of the sequence for the dataset)
     hidden_size = 128
-    max_epoch = 20 #40
+    max_epoch = 10 #40
     keep_prob = 0.9
     lr_decay = 0.8
-    batch_size = 20 #20
+    batch_size = 8 # 20
     num_classes = 2 # CHANGE THIS IF MORE CLASSES
 
 class CharLevelDNAVocab(object):
@@ -89,7 +89,6 @@ class EnhancerRNN(object):
         num_batches = (len(data) // self.config.batch_size)
         start_time = time.time()
         costs = 0.0
-        iters = 0
         state = self.initial_state.eval()
         for step, (x,y) in enumerate(self.enhancer_iterator(data, labels, 
                                                        self.config.batch_size,
@@ -99,17 +98,19 @@ class EnhancerRNN(object):
                                          self.targets: y,
                                          self.initial_state: state })
             costs += cost
-            iters += self.config.num_steps
 
-            if verbose: # and step % (epoch_size // 10) == 10:
+            if verbose and num_batches // 10 == 0:
                 print("batch %d of %d; perplexity: %.3f; time elapsed: %.3f s" %
-                      (step+1, num_batches, np.exp(costs / iters),time.time() - start_time))
-                
-        return np.exp(costs / iters)
+                      (step+1, num_batches, np.exp(costs / (step+1)),time.time() - start_time))
+            elif verbose and step % (num_batches // 10) == 0:
+                print("batch %d of %d; perplexity: %.3f; time elapsed: %.3f s" %
+                      (step+1, num_batches, np.exp(costs / (step+1)),time.time() - start_time))
+        
+        return np.exp(costs/num_batches)
 
     def predict(self, session, data, labels=None):
         """ Make predictions from provided model. If labels is not none, calculate loss. """
-        
+
         self.dropout = 1.0
         losses,results = [],[]
         for step, (x,y) in enumerate(self.enhancer_iterator(data, labels, 
@@ -125,9 +126,10 @@ class EnhancerRNN(object):
                 preds = session.run(self.predictions,
                                     {self.input_data: x,
                                      self.initial_state: self.initial_state.eval()})
+            
             results.extend(np.argmax(preds,1))
         self.dropout = self.config.keep_prob
-        return np.mean(losses), results
+        return np.exp(np.mean(losses)), results
 
     def enhancer_iterator(self, data, labels, batch_size, num_steps):
         """
@@ -156,8 +158,8 @@ class EnhancerRNN(object):
         # data will have batch_len elements, each of size batch_size
         # ASSUME FIXED SEQUENCE LENGTHS OFF 1000 FOR NOW (5/20/16)
         # Just grab middle self.config.num_steps nucleotides
-        a = len(mdata[0,:])/2-self.config.num_steps/2 
-        b = len(mdata[0,:])/2+self.config.num_steps/2
+        a = int(len(mdata[0,:])/2-self.config.num_steps/2)
+        b = int(len(mdata[0,:])/2+self.config.num_steps/2)
         for i in range(num_batches):
             x = mdata[batch_size*i:batch_size*(i+1),a:b]
             if labels is not None:
@@ -207,7 +209,8 @@ if __name__ == "__main__":
                    /float(len(valid_preds))))
 
             if valid_loss < best_val_loss:
-                best_val_loss,best_val_epoch = valid_loss,i
+                best_val_loss = valid_loss
+                best_val_epoch = i
                 saver.save(session, './weights/weights.epoch'+str(i)+'.best')
             
             saver.save(session, './weights/weights.epoch'+str(i))
