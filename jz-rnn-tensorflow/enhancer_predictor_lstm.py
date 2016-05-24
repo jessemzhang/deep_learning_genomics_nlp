@@ -17,7 +17,7 @@ class Config(object):
     learning_rate = 1.0e-3
     max_grad_norm = 5
     num_layers = 2
-    num_steps = 10 #1000 #(the entire length of the sequence for the dataset)
+    num_steps = 100 #1000 #(use 10 for debugging with positive.* dataset)
     hidden_size = 128
     keep_prob = 0.9
     max_epoch = 40
@@ -219,9 +219,13 @@ if __name__ == "__main__":
             train_loss = m.run_epoch(session, train_data, train_labels)
             print("Train loss: %.3f" % (train_loss))
             valid_loss,valid_preds = m.predict(session, valid_data, valid_labels)
-            print("Valid loss: %.3f, error rate: %.3f" % 
-                  (valid_loss,sum(valid_labels[0:len(valid_preds)] != valid_preds)
-                   /float(len(valid_preds))))
+            valid_err = sum(valid_labels[0:len(valid_preds)]!=valid_preds)/float(len(valid_preds))
+            print("Valid loss: %.3f, error rate: %.3f" % (valid_loss,valid_err))
+
+            # Save validation loss 
+            f = open('weights/validation_errors','a')
+            f.write(str(valid_loss)+'\t'+str(valid_err)+'\n')
+            f.close()
 
             if valid_loss < best_val_loss:
                 best_val_loss = valid_loss
@@ -239,7 +243,6 @@ if __name__ == "__main__":
 
         saver.restore(session, './weights/weights.epoch'+str(best_val_epoch)+'.best')
         test_loss,test_preds = m.predict(session, test_data, test_labels)
+        test_err = sum(test_labels[:len(test_preds)] != test_preds)/float(len(test_preds))
         print("="*80)
-        print("Test loss: %.3f, error rate: %.3f" % 
-              (test_loss,sum(test_labels[:len(test_preds)] != test_preds)
-               /float(len(test_preds))))
+        print("Test loss: %.3f, error rate: %.3f" % (test_loss,test_err))
