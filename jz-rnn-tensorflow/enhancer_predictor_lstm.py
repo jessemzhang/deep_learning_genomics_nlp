@@ -14,13 +14,14 @@ import numpy as np
 import tensorflow as tf
 
 class Config(object):
-    learning_rate = 1.0e-3
+    learning_rate = 1.0e-2
     max_grad_norm = 5
     num_layers = 2
     num_steps = 100 #1000 #(use 10 for debugging with positive.* dataset)
-    hidden_size = 128
+    embed_size = 2
+    hidden_size = 100
     keep_prob = 0.9
-    max_epoch = 40
+    max_epoch = 30
     epochs_with_same_lr = 5
     lr_decay = 0.3
     batch_size = 8 # 20
@@ -46,7 +47,7 @@ class EnhancerRNN(object):
         self.dropout = tf.placeholder(tf.float32)
 
         with tf.device("/cpu:0"):
-            embedding = tf.get_variable("embedding", [vocab.size,config.hidden_size])
+            embedding = tf.get_variable("embedding", [vocab.size,config.embed_size])
             inputs = tf.nn.embedding_lookup(embedding, self.input_data)
         
         # The "Recurrent" part (only look at last output of the sequence)
