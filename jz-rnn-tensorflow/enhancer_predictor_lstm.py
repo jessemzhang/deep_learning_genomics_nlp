@@ -21,11 +21,11 @@ class Config(object):
     hidden_size = 128
     keep_prob = 0.9
     max_epoch = 40
-    epochs_with_initial_lr = 20
-    lr_decay = 0.5
+    epochs_with_same_lr = 5
+    lr_decay = 0.3
     batch_size = 8 # 20
     num_classes = 2 # CHANGE THIS IF MORE CLASSES
-    early_stopping = 3
+    early_stopping = 10
 
 class CharLevelDNAVocab(object):
     size = 4
@@ -113,10 +113,11 @@ class EnhancerRNN(object):
             if verbose and num_batches // 10 == 0: # In case num_batches < 10
                 print("batch %d of %d; perplexity: %.3f; time elapsed: %.3f s" %
                       (step+1, num_batches, np.exp(costs / (step+1)),time.time() - start_time))
+                start_time = time.time()
             elif verbose and step % (num_batches // 10) == 0:
                 print("batch %d of %d; perplexity: %.3f; time elapsed: %.3f s" %
                       (step+1, num_batches, np.exp(costs / (step+1)),time.time() - start_time))
-            start_time = time.time()
+                start_time = time.time()
         
         return np.exp(costs/num_batches)
 
@@ -194,6 +195,7 @@ if __name__ == "__main__":
     test_labels = np.loadtxt(sys.argv[1]+'.labels.test.txt')
     config = Config()
     vocab = CharLevelDNAVocab()
+    lr = config.learning_rate
 
     with tf.Graph().as_default(), tf.Session() as session:
         initializer = tf.random_uniform_initializer(-0.01,0.01)
@@ -204,8 +206,6 @@ if __name__ == "__main__":
         print('setting up model..')
         with tf.variable_scope("model",reuse=None, initializer=initializer):
             m = EnhancerRNN(config=config,vocab=vocab)
-        m.assign_lr(session, config.learning_rate)
-        lr = config.learning_rate
         print('model set up')
 
         saver = tf.train.Saver()
@@ -213,6 +213,7 @@ if __name__ == "__main__":
         tf.initialize_all_variables().run()
 
         for i in range(config.max_epoch):
+            m.assign_lr(session, lr)
             print("="*80)
             print('Epoch %d with learning rate %.3f' %(i,lr))
             train_loss = m.run_epoch(session, train_data, train_labels)
@@ -228,9 +229,11 @@ if __name__ == "__main__":
                 saver.save(session, './weights/weights.epoch'+str(i)+'.best')
                 
             # If loss isn't getting better after a few iterations, decrease lr
+            if i-best_val_epoch > config.epochs_with_same_lr:
+                lr *= config.lr_decay
+            # If loss isn't getting better after a lot of iterations, quit
             if i-best_val_epoch > config.early_stopping:
-                lr = lr*config.lr_decay**(i-best_val_epoch)
-                m.assign_lr(session, lr)
+                break
 
             saver.save(session, './weights/weights.epoch'+str(i))
 
