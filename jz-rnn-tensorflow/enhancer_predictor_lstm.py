@@ -223,7 +223,6 @@ if __name__ == "__main__":
             valid_loss,valid_preds = m.predict(session, valid_data, valid_labels)
             valid_err = sum(valid_labels[0:len(valid_preds)]!=valid_preds)/float(len(valid_preds))
             valid_f1 = f1_score(valid_labels[0:len(valid_preds)],valid_preds)
-            print(valid_labels[0:len(valid_preds)],valid_preds)
             print("Valid loss: %.3f, error rate: %.3f, F1 score: %.3f" % (valid_loss,valid_err,valid_f1))
 
             # Save validation loss 
