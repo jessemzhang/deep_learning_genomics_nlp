@@ -12,19 +12,20 @@ from __future__ import print_function
 import time,sys,os
 import numpy as np
 import tensorflow as tf
+from sklearn.metrics import f1_score
 
 class Config(object):
     learning_rate = 1.0e-2
     max_grad_norm = 5
     num_layers = 2
-    num_steps = 100 #1000 #(use 10 for debugging with positive.* dataset)
+    num_steps = 40 #1000 #(use 10 for debugging with positive.* dataset)
     embed_size = 2
     hidden_size = 100
     keep_prob = 0.9
     max_epoch = 30
     epochs_with_same_lr = 5
     lr_decay = 0.3
-    batch_size = 8 # 20
+    batch_size = 20 # 20
     num_classes = 2 # CHANGE THIS IF MORE CLASSES
     early_stopping = 10
 
@@ -221,11 +222,13 @@ if __name__ == "__main__":
             print("Train loss: %.3f" % (train_loss))
             valid_loss,valid_preds = m.predict(session, valid_data, valid_labels)
             valid_err = sum(valid_labels[0:len(valid_preds)]!=valid_preds)/float(len(valid_preds))
-            print("Valid loss: %.3f, error rate: %.3f" % (valid_loss,valid_err))
+            valid_f1 = f1_score(valid_labels[0:len(valid_preds)],valid_preds)
+            print(valid_labels[0:len(valid_preds)],valid_preds)
+            print("Valid loss: %.3f, error rate: %.3f, F1 score: %.3f" % (valid_loss,valid_err,valid_f1))
 
             # Save validation loss 
             f = open('weights/validation_errors','a')
-            f.write(str(valid_loss)+'\t'+str(valid_err)+'\n')
+            f.write(str(valid_loss)+'\t'+str(valid_err)+'\t'+str(valid_f1)+'\n')
             f.close()
 
             if valid_loss < best_val_loss:
@@ -245,5 +248,6 @@ if __name__ == "__main__":
         saver.restore(session, './weights/weights.epoch'+str(best_val_epoch)+'.best')
         test_loss,test_preds = m.predict(session, test_data, test_labels)
         test_err = sum(test_labels[:len(test_preds)] != test_preds)/float(len(test_preds))
+        test_f1 = f1_score(test_labels[0:len(test_preds)],test_preds)
         print("="*80)
-        print("Test loss: %.3f, error rate: %.3f" % (test_loss,test_err))
+        print("Test loss: %.3f, error rate: %.3f, F1 score: %.3f" % (test_loss,test_err,test_f1))
