@@ -13,19 +13,20 @@ import time,sys,os
 import numpy as np
 import tensorflow as tf
 from sklearn.metrics import f1_score
+from jz_rnn_cell import *
 
 class Config(object):
     learning_rate = 1.0e-3
     max_grad_norm = 5
-    num_layers = 3
-    num_steps = 100 #1000 #(use 10 for debugging with positive.* dataset)
+    num_layers = 2
+    num_steps = 10 #1000 #(use 10 for debugging with positive.* dataset)
     embed_size = 2
     hidden_size = 128
     keep_prob = 0.95
     max_epoch = 40
     epochs_with_same_lr = 2
     lr_decay = 0.5
-    batch_size = 20 # 20
+    batch_size = 8 # 20
     num_classes = 2 # CHANGE THIS IF MORE CLASSES
     early_stopping = 40
 
@@ -51,7 +52,7 @@ class EnhancerRNN(object):
         inputs = tf.nn.embedding_lookup(embedding, self.input_data)
         
         # The "Recurrent" part (only look at last output of the sequence)
-        cell = tf.nn.rnn_cell.GRUCell(config.hidden_size)
+        cell = jzGRUCell(config.hidden_size,activation=tf.nn.tanh)
         cell = tf.nn.rnn_cell.MultiRNNCell([cell]*config.num_layers)
         cell = tf.nn.rnn_cell.DropoutWrapper(cell,
                                              input_keep_prob = self.dropout,
@@ -182,6 +183,10 @@ class EnhancerRNN(object):
                 y = None
             yield(x,y)
         
+def shuffle_in_unison_inplace(a,b):
+    assert len(a) == len(b)
+    p = np.random.permutation(len(a))
+    return a[p], b[p]
 
 if __name__ == "__main__":
     if len(sys.argv)<2:
@@ -214,6 +219,9 @@ if __name__ == "__main__":
         tf.initialize_all_variables().run()
 
         for i in range(config.max_epoch):
+            # Shuffle the data
+            train_data,train_labels = shuffle_in_unison_inplace(train_data,train_labels)
+
             m.assign_lr(session, lr)
             print("="*80)
             print('Epoch %d with learning rate %.10f' %(i,lr))
