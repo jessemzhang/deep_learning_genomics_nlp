@@ -17,17 +17,17 @@ from sklearn.metrics import f1_score
 class Config(object):
     learning_rate = 1.0e-3
     max_grad_norm = 5
-    num_layers = 2
+    num_layers = 3
     num_steps = 100 #1000 #(use 10 for debugging with positive.* dataset)
     embed_size = 2
     hidden_size = 128
     keep_prob = 0.95
-    max_epoch = 20
-    epochs_with_same_lr = 5
-    lr_decay = 0.3
+    max_epoch = 40
+    epochs_with_same_lr = 2
+    lr_decay = 0.5
     batch_size = 20 # 20
     num_classes = 2 # CHANGE THIS IF MORE CLASSES
-    early_stopping = 10
+    early_stopping = 40
 
 class CharLevelDNAVocab(object):
     size = 4
@@ -51,7 +51,7 @@ class EnhancerRNN(object):
         inputs = tf.nn.embedding_lookup(embedding, self.input_data)
         
         # The "Recurrent" part (only look at last output of the sequence)
-        cell = tf.nn.rnn_cell.BasicLSTMCell(config.hidden_size)
+        cell = tf.nn.rnn_cell.GRUCell(config.hidden_size)
         cell = tf.nn.rnn_cell.MultiRNNCell([cell]*config.num_layers)
         cell = tf.nn.rnn_cell.DropoutWrapper(cell,
                                              input_keep_prob = self.dropout,
@@ -216,7 +216,7 @@ if __name__ == "__main__":
         for i in range(config.max_epoch):
             m.assign_lr(session, lr)
             print("="*80)
-            print('Epoch %d with learning rate %.3f' %(i,lr))
+            print('Epoch %d with learning rate %.10f' %(i,lr))
             train_loss = m.run_epoch(session, train_data, train_labels)
             print("Train loss: %.3f" % (train_loss))
             valid_loss,valid_preds = m.predict(session, valid_data, valid_labels)
@@ -224,9 +224,9 @@ if __name__ == "__main__":
             valid_f1 = f1_score(valid_labels[0:len(valid_preds)],valid_preds)
             print("Valid loss: %.3f, error rate: %.3f, F1 score: %.3f" % (valid_loss,valid_err,valid_f1))
 
-            # Save validation loss 
+            # Save training and validation losses 
             f = open('weights/validation_errors','a')
-            f.write(str(valid_loss)+'\t'+str(valid_err)+'\t'+str(valid_f1)+'\n')
+            f.write(str(train_loss)+'\t'+str(valid_loss)+'\t'+str(valid_err)+'\t'+str(valid_f1)+'\n')
             f.close()
 
             if valid_loss < best_val_loss:
