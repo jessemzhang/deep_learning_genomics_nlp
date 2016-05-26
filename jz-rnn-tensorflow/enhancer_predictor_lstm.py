@@ -15,14 +15,14 @@ import tensorflow as tf
 from sklearn.metrics import f1_score
 
 class Config(object):
-    learning_rate = 1.0e-2
+    learning_rate = 1.0e-3
     max_grad_norm = 5
     num_layers = 2
-    num_steps = 40 #1000 #(use 10 for debugging with positive.* dataset)
+    num_steps = 100 #1000 #(use 10 for debugging with positive.* dataset)
     embed_size = 2
-    hidden_size = 100
-    keep_prob = 0.9
-    max_epoch = 30
+    hidden_size = 128
+    keep_prob = 0.95
+    max_epoch = 20
     epochs_with_same_lr = 5
     lr_decay = 0.3
     batch_size = 20 # 20
@@ -47,9 +47,8 @@ class EnhancerRNN(object):
         self.targets = tf.placeholder(tf.int32, [config.batch_size])
         self.dropout = tf.placeholder(tf.float32)
 
-        with tf.device("/cpu:0"):
-            embedding = tf.get_variable("embedding", [vocab.size,config.embed_size])
-            inputs = tf.nn.embedding_lookup(embedding, self.input_data)
+        embedding = tf.get_variable("embedding", [vocab.size,config.embed_size])
+        inputs = tf.nn.embedding_lookup(embedding, self.input_data)
         
         # The "Recurrent" part (only look at last output of the sequence)
         cell = tf.nn.rnn_cell.BasicLSTMCell(config.hidden_size)
@@ -234,10 +233,11 @@ if __name__ == "__main__":
                 best_val_loss = valid_loss
                 best_val_epoch = i
                 saver.save(session, './weights/weights.epoch'+str(i)+'.best')
+                print('BEST EPOCH SO FAR: '+str(i))
                 
             # If loss isn't getting better after a few iterations, decrease lr
-            if i-best_val_epoch > config.epochs_with_same_lr:
-                lr *= config.lr_decay
+#            if i-best_val_epoch > config.epochs_with_same_lr:
+#                lr *= config.lr_decay
             # If loss isn't getting better after a lot of iterations, quit
             if i-best_val_epoch > config.early_stopping:
                 break
