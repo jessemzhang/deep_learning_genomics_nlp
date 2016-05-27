@@ -72,6 +72,6 @@ with tf.Session() as sess:
         	print(i, np.mean(np.argmax(Y_train[:,start:start+batch_size].T, axis=1) == prediction))
             
         print "Testing"
-        feed = {X: X_test, Y: Y_test}
+        feed = {X: X_test, Y: Y_test.T}
        	[prediction]=sess.run([predict_op], feed_dict=feed)
        	print(i, np.mean(np.argmax(Y_test.T, axis=1) == prediction))
