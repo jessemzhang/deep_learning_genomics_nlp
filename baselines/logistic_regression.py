@@ -5,6 +5,11 @@
 
 import itertools
 import numpy as np
+import matplotlib.pyplot as plt
+from sklearn import linear_model
+from sklearn.metrics import f1_score
+import pickle
+import time
 
 # Test different feature vectors for each sequence
 d = {'A':0,'G':1,'C':2,'T':3}
@@ -35,9 +40,7 @@ def kmer_count(s):
 
 # In[7]:
 
-import numpy as np
-import pickle
-import time
+
 
 def load_features(feature_extractor,filename):
     # Read in sequence
@@ -68,13 +71,12 @@ feature_extractor = kmer_count
 # pickle.dump((X_test,X_train,X_valid,Y_test,Y_train,Y_valid),file('data.pickle','wb'))
 X_test,X_train,X_valid,Y_test,Y_train,Y_valid = pickle.load(file('data.pickle','rb')) 
 
+print "data loaded."
 
 # In[ ]:
 
 # logistic regression model
-import matplotlib.pyplot as plt
-from sklearn import linear_model
-from sklearn.metrics import f1_score
+
 
 clist = [1,10,100,1000,10000,100000,100000,1000000,10000000]
 
@@ -82,7 +84,8 @@ train_errors = []
 test_errors = []
 
 for c in clist:
-    logreg = linear_model.LogisticRegression(C=1e6)
+    print c
+    logreg = linear_model.LogisticRegression(C=c)
     logreg.fit(X_train, Y_train)
     Yhat_train = logreg.predict(X_train)
     Yhat_test = logreg.predict(X_test)
