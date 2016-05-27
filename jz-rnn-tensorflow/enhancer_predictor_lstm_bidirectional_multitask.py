@@ -24,11 +24,12 @@ class Config(object):
     embed_size = 2
     hidden_size = 64
     keep_prob = 0.95
-    max_epoch = 40
+    max_epoch = 20
     epochs_with_same_lr = 2
     lr_decay = 0.5
     batch_size = 8 # 20
-    num_classes = 2 # CHANGE THIS IF MORE CLASSES
+    num_classes = 2 # per task 
+    num_tasks = 3 # for multitask learning
     early_stopping = 40
 
 class CharLevelDNAVocab(object):
@@ -46,7 +47,7 @@ class EnhancerRNN(object):
 
         # Placeholder variables
         self.input_data = tf.placeholder(tf.int32, [config.batch_size,config.num_steps])
-        self.targets = tf.placeholder(tf.int32, [config.batch_size])
+        self.targets = tf.placeholder(tf.int32, [config.batch_size,config.num_tasks])
         self.dropout = tf.placeholder(tf.float32)
 
         embedding = tf.get_variable("embedding", [vocab.size,config.embed_size])
@@ -66,19 +67,28 @@ class EnhancerRNN(object):
         self.final_state = state
                     
         # The prediction (softmax) part
-        Ws = tf.get_variable("softmax_w", [config.hidden_size*2,config.num_classes])
-        bs = tf.get_variable("softmax_b", [config.num_classes])
-        logits = tf.matmul(output,Ws) + bs
-        self.predictions = tf.nn.softmax(logits)
+        Ws,bs = [],[]
+        self.predictions = []
+        cost = 0
+        for i in range(config.num_tasks): 
+            # Same weights for RNN for all tasks; different softmax weights
+            Ws.append(tf.get_variable("softmax_w"+str(i), 
+                                      [config.hidden_size*2,config.num_classes]))
+            bs.append(tf.get_variable("softmax_b"+str(i), [config.num_classes]))
+            logits = tf.matmul(output,Ws[i]) + bs[i]
+            self.predictions.append(tf.nn.softmax(logits))
 
-        # Loss ("sparse" version of this function requires mutually exclusive classes)
-        loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits,self.targets)
-        self.cost = tf.reduce_sum(loss) / config.batch_size
-
+            # Loss ("sparse" version of this function requires mutually exclusive classes)
+            labels = tf.squeeze(tf.slice(self.targets,[0,i],[config.batch_size,1]))
+            loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits,labels)
+            cost += tf.reduce_sum(loss) / config.batch_size
+        cost /= config.num_tasks
+        self.cost = cost
+        
         # Optimizer (learning rate will be assigned using assign_lr)
         self.lr = tf.Variable(0.0, trainable=False)
         optimizer = tf.train.AdamOptimizer(learning_rate=self.lr) 
-        self.train_op = optimizer.minimize(loss)
+        self.train_op = optimizer.minimize(cost)
 
     def one_direction_RNN(self, cell, inputs, state, direction='FW'):
         itersteps = range(self.config.num_steps)
@@ -146,25 +156,28 @@ class EnhancerRNN(object):
     def predict(self, session, data, labels=None):
         """ Make predictions from provided model. If labels is not none, calculate loss. """
 
-        losses,results = [],[]
+        losses,results = [],[[] for i in range(self.config.num_tasks)]
         for step, (x,y) in enumerate(self.enhancer_iterator(data, labels, 
                                                             self.config.batch_size,
                                                             self.config.num_steps)):
             if y is not None:
-                cost, preds = session.run([self.cost, self.predictions],
-                                          {self.input_data: x,
-                                           self.targets: y,
-                                           self.dropout: 1.0,
-                                           self.initial_state: self.initial_state.eval()})
+                a = session.run([ self.cost ]+[ pred for pred in self.predictions ],
+                                { self.input_data: x,
+                                  self.targets: y,
+                                  self.dropout: 1.0,
+                                  self.initial_state: self.initial_state.eval()})
+                cost = a[0]
+                preds = a[1:]
                 losses.append(cost)
             else:
-                preds = session.run(self.predictions,
-                                    {self.input_data: x,
-                                     self.dropout: 1.0,
-                                     self.initial_state: self.initial_state.eval()})
-            
-            results.extend(np.argmax(preds,1))
-        return np.exp(np.mean(losses)), results
+                preds = session.run([ pred for pred in self.predictions ],
+                                    { self.input_data: x,
+                                      self.dropout: 1.0,
+                                      self.initial_state: self.initial_state.eval()})
+            all_preds = [np.argmax(pred,1) for pred in preds]
+            for task in range(config.num_tasks):
+                results[task].extend(all_preds[task])
+        return np.exp(np.mean(losses)), np.array(results).T
 
     def enhancer_iterator(self, data, labels, batch_size, num_steps):
         """
@@ -172,7 +185,7 @@ class EnhancerRNN(object):
         
         Args:
           data: length N array of sequences (nucleotides A C T G)
-          labels: length N array of labels (integers) for each sequence
+          labels: length N-by-num_tasks array of labels (integers) for each sequence
                   (the max value of this array = # of labels)
           batch_size: int, the batch size
           num_steps: int, number of unrolls
@@ -198,7 +211,7 @@ class EnhancerRNN(object):
         for i in range(num_batches):
             x = mdata[batch_size*i:batch_size*(i+1),a:b]
             if labels is not None:
-                y = labels[batch_size*i:batch_size*(i+1)]
+                y = labels[batch_size*i:batch_size*(i+1),:]
             else:
                 y = None
             yield(x,y)
@@ -207,6 +220,22 @@ def shuffle_in_unison_inplace(a,b):
     assert len(a) == len(b)
     p = np.random.permutation(len(a))
     return a[p], b[p]
+
+def compute_error_rates(a,b):
+    # 'a' are true labels, 'b' are estimated labels
+    err_rates = []
+    N,num_tasks = np.shape(b)
+    for i in range(num_tasks):
+        err_rates.append(sum(a[0:N,i]!=b[:,i])/float(N))
+    return err_rates
+
+def compute_f1_scores(a,b):
+    # 'a' are true labels, 'b' are estimated labels
+    f1_scores = []
+    N,num_tasks = np.shape(b)
+    for i in range(num_tasks):
+        f1_scores.append(f1_score(a[0:N,i],b[:,i]))
+    return f1_scores
 
 if __name__ == "__main__":
     if len(sys.argv)<2:
@@ -248,9 +277,11 @@ if __name__ == "__main__":
             train_loss = m.run_epoch(session, train_data, train_labels)
             print("Train loss: %.3f" % (train_loss))
             valid_loss,valid_preds = m.predict(session, valid_data, valid_labels)
-            valid_err = sum(valid_labels[0:len(valid_preds)]!=valid_preds)/float(len(valid_preds))
-            valid_f1 = f1_score(valid_labels[0:len(valid_preds)],valid_preds)
-            print("Valid loss: %.3f, error rate: %.3f, F1 score: %.3f" % (valid_loss,valid_err,valid_f1))
+            valid_err = compute_error_rates(valid_labels,valid_preds)
+            valid_f1 = compute_f1_scores(valid_labels,valid_preds)
+            print("Valid loss: %.3f" % (valid_loss))
+            print("Valid error rates: "+' '.join(['%.3f'%(j) for j in valid_err]))
+            print("Valid f1 scores: "+' '.join(['%.3f'%(j) for j in valid_f1]))
 
             # Save training and validation losses 
             f = open('weights/validation_errors','a')
@@ -274,7 +305,9 @@ if __name__ == "__main__":
 
         saver.restore(session, './weights/weights.epoch'+str(best_val_epoch)+'.best')
         test_loss,test_preds = m.predict(session, test_data, test_labels)
-        test_err = sum(test_labels[:len(test_preds)] != test_preds)/float(len(test_preds))
-        test_f1 = f1_score(test_labels[0:len(test_preds)],test_preds)
+        test_err = compute_error_rates(test_labels,test_preds)
+        test_f1 = compute_f1_scores(test_labels,test_preds)
         print("="*80)
-        print("Test loss: %.3f, error rate: %.3f, F1 score: %.3f" % (test_loss,test_err,test_f1))
+        print("Test loss: %.3f" % (test_loss))
+        print("Test error rates: "+' '.join(['%.3f'%(j) for j in test_err]))
+        print("Test f1 scores: "+' '.join(['%.3f'%(j) for j in test_f1]))
