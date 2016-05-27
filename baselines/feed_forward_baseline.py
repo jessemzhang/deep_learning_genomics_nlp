@@ -64,7 +64,7 @@ with tf.Session() as sess:
     # you need to initialize all variables
     tf.initialize_all_variables().run()
 
-    for i in range(1):
+    for i in range(100):
         for start in range(0, len(X_train), batch_size):
         	print start 
         	feed = {X: X_train[start:start+batch_size,:], Y: Y_train[:,start:start+batch_size].T}
