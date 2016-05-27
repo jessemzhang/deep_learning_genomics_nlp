@@ -56,14 +56,15 @@ loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(h, Y)) + tf.get_co
 
 opt = tf.train.AdamOptimizer(lr)
 train_op = opt.minimize(loss)
-predict_op = tf.argmax(h, 1)
+
+predict_op = tf.argmax(tf.nn.softmax(h), 1)
 
 
 with tf.Session() as sess:
     # you need to initialize all variables
     tf.initialize_all_variables().run()
 
-    for i in [1]:
+    for i in range(100):
         for start in range(0, len(X_train), batch_size):
         	print start 
         	feed = {X: X_train[start:start+batch_size,:], Y: Y_train[:,start:start+batch_size].T}
@@ -71,16 +72,19 @@ with tf.Session() as sess:
         	print "Training"
         	# print str(loss)
         	ytrain = np.argmax(Y_train[:,start:start+batch_size].T, axis=1)
-        	yhattrain = np.argmax(prediction)
+        	yhattrain = prediction
+        	# print ytrain
+        	# print yhattrain
         	pred_loss_train = f1_score(ytrain,yhattrain)
-        	print(i, pred_loss_train)
+        	print(i, loss_train, pred_loss_train)
             
         print "Testing"
         feed = {X: X_test, Y: Y_test.T}
        	[prediction]=sess.run([predict_op], feed_dict=feed)
 
        	ytest = np.argmax(Y_test.T, axis=1)
-        yhattest = np.argmax(prediction)
+        yhattest = prediction
+
         pred_loss_test = f1_score(ytest,yhattest)
 
        	print(i, pred_loss_test)
