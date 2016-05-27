@@ -16,20 +16,36 @@ from tensorflow.python.ops.rnn import *
 from sklearn.metrics import f1_score
 from jz_rnn_cell import *
 
-class Config(object):
+class DeepseaConfig(object):
     learning_rate = 1.0e-3
     max_grad_norm = 5
     num_layers = 2
-    num_steps = 10 #1000 #(use 10 for debugging with positive.* dataset)
+    num_steps = 100 # 1000
+    embed_size = 2
+    hidden_size = 128
+    keep_prob = 0.95
+    max_epoch = 200
+    epochs_with_same_lr = 2
+    lr_decay = 0.5
+    batch_size = 20
+    num_classes = 2 # per task 
+    num_tasks = 919 # for multitask learning
+    early_stopping = 100
+
+class PositiveConfig(object):
+    learning_rate = 1.0e-3
+    max_grad_norm = 5
+    num_layers = 2
+    num_steps = 10
     embed_size = 2
     hidden_size = 64
     keep_prob = 0.95
     max_epoch = 20
     epochs_with_same_lr = 2
     lr_decay = 0.5
-    batch_size = 8 # 20
+    batch_size = 8 
     num_classes = 2 # per task 
-    num_tasks = 3 # for multitask learning
+    num_tasks = 3   # for multitask learning
     early_stopping = 40
 
 class CharLevelDNAVocab(object):
@@ -248,7 +264,7 @@ if __name__ == "__main__":
     valid_labels = np.loadtxt(sys.argv[1]+'.labels.valid.txt')
     test_data = np.loadtxt(sys.argv[1]+'.data.test.txt',dtype=str)
     test_labels = np.loadtxt(sys.argv[1]+'.labels.test.txt')
-    config = Config()
+    config = DeepseaConfig()
     vocab = CharLevelDNAVocab()
     lr = config.learning_rate
 
