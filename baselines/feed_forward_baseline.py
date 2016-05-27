@@ -3,6 +3,7 @@
 import tensorflow as tf
 import numpy as np
 import pickle
+from sklearn.metrics import f1_score
 
 X_test,X_train,X_valid,_,_,_ = pickle.load(file('data.pickle','rb')) 
 Y_test,Y_train,Y_valid = pickle.load(file('one_hot_test_labels.pickle','rb'))
@@ -69,9 +70,17 @@ with tf.Session() as sess:
          	[loss_train, prediction,_]=sess.run([loss, predict_op,train_op], feed_dict=feed)
         	print "Training"
         	# print str(loss)
-        	print(i, np.mean(np.argmax(Y_train[:,start:start+batch_size].T, axis=1) == prediction))
+        	ytrain = np.argmax(Y_train[:,start:start+batch_size].T, axis=1)
+        	yhattrain = np.argmax(prediction)
+        	pred_loss_train = f1_score(ytrain,yhattrain)
+        	print(i, pred_loss_train)
             
         print "Testing"
         feed = {X: X_test, Y: Y_test.T}
        	[prediction]=sess.run([predict_op], feed_dict=feed)
-       	print(i, np.mean(np.argmax(Y_test.T, axis=1) == prediction))
+
+       	ytest = np.argmax(Y_test.T, axis=1)
+        yhattest = np.argmax(prediction)
+        pred_loss_test = f1_score(ytest,yhattest)
+
+       	print(i, pred_loss_test)
