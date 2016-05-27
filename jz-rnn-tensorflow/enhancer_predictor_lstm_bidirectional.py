@@ -22,7 +22,7 @@ class Config(object):
     num_layers = 2
     num_steps = 10 #1000 #(use 10 for debugging with positive.* dataset)
     embed_size = 2
-    hidden_size = 128
+    hidden_size = 64
     keep_prob = 0.95
     max_epoch = 40
     epochs_with_same_lr = 2
@@ -58,17 +58,15 @@ class EnhancerRNN(object):
         cell = tf.nn.rnn_cell.DropoutWrapper(cell,
                                              input_keep_prob = self.dropout,
                                              output_keep_prob = self.dropout)
-        self.initial_state = cell.zero_state(config.batch_size, tf.float32)
-        state = self.initial_state
-        with tf.variable_scope("RNN"):
-            for t in range(config.num_steps):
-                if t > 0:
-                    tf.get_variable_scope().reuse_variables()
-                (output, state) = cell(inputs[:,t,:], state)
+        cell_fw = cell
+        cell_bw = cell
+        self.initial_state = cell.zero_state(self.config.batch_size, tf.float32)
+        self.initial_state = tf.concat(1,[self.initial_state,self.initial_state])
+        output,state = self.bi_directional_RNN(cell_fw,cell_bw,inputs,self.initial_state)
         self.final_state = state
                     
         # The prediction (softmax) part
-        Ws = tf.get_variable("softmax_w", [config.hidden_size,config.num_classes])
+        Ws = tf.get_variable("softmax_w", [config.hidden_size*2,config.num_classes])
         bs = tf.get_variable("softmax_b", [config.num_classes])
         logits = tf.matmul(output,Ws) + bs
         self.predictions = tf.nn.softmax(logits)
@@ -82,6 +80,27 @@ class EnhancerRNN(object):
         optimizer = tf.train.AdamOptimizer(learning_rate=self.lr) 
         self.train_op = optimizer.minimize(loss)
 
+    def one_direction_RNN(self, cell, inputs, state, direction='FW'):
+        itersteps = range(self.config.num_steps)
+        if direction == 'BW': itersteps.reverse()
+        with tf.variable_scope("RNN"+direction):
+            for i,t in enumerate(itersteps):
+                if i > 0:
+                    tf.get_variable_scope().reuse_variables()
+                (output, state) = cell(inputs[:,t,:], state)
+        return output,state
+
+    def bi_directional_RNN(self, cell_fw, cell_bw, inputs, initial_state):
+        # Use two one_direction_RNN function outputs. Concatenate the output
+        initial_state_fw,initial_state_bw = tf.split(1,2,initial_state)
+        output_fw,final_state_fw = self.one_direction_RNN(cell_fw,inputs, 
+                                                          initial_state_fw, direction='FW')
+        output_bw,final_state_bw = self.one_direction_RNN(cell_bw,inputs, 
+                                                          initial_state_bw, direction='BW')
+        output = tf.concat(1,[output_fw,output_bw])
+        final_state = tf.concat(1,[final_state_fw,final_state_bw])
+        return output,final_state
+        
     def assign_lr(self, session, lr):
         """ Update learning rate if needed (for adaptive learning rates) """
         session.run(tf.assign(self.lr,lr))
