@@ -1,0 +1,24 @@
+\begin{thebibliography}{1}
+
+\bibitem{BueGre}
+Jason~D Buenrostro, Beijing Wu, Ulrike~M Litzenburger, Dave Ruff, Michael~L
+  Gonzales, Michael~P Snyder, Howard~Y Chang, and William~J Greenleaf.
+\newblock Single-cell chromatin accessibility reveals principles of regulatory
+  variation.
+\newblock {\em Nature}, 523(7561):486--490, 2015.
+
+\bibitem{NtrKamZhaPacTse}
+Vasilis Ntranos, Govinda~M Kamath, Jesse Zhang, Lior Pachter, and David~N Tse.
+\newblock Fast and accurate single-cell rna-seq analysis by clustering of
+  transcript-compatibility counts.
+\newblock {\em Genome Biology, in press}, page 036863, 2016.
+
+\bibitem{ZeiLin}
+Amit Zeisel, Ana~B Mu{\~n}oz-Manchado, Simone Codeluppi, Peter L{\"o}nnerberg,
+  Gioele La~Manno, Anna Jur{\'e}us, Sueli Marques, Hermany Munguba, Liqun He,
+  Christer Betsholtz, et~al.
+\newblock Cell types in the mouse cortex and hippocampus revealed by
+  single-cell rna-seq.
+\newblock {\em Science}, 347(6226):1138--1142, 2015.
+
+\end{thebibliography}

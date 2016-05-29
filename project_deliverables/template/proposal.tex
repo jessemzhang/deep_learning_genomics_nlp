@@ -1,0 +1,106 @@
+\documentclass[11pt,onecolumn]{article}
+
+\usepackage[lmargin=0.75in,rmargin=0.75in,tmargin=.75in,bmargin=0.7in]{geometry}
+
+
+\usepackage[tbtags]{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{subfigure}
+\usepackage{cite}
+\usepackage{calc}
+\usepackage{color}
+\usepackage{epsfig}
+%\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage{enumerate}
+\usepackage{bm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+% \usepackage{cite}
+
+\newtheorem{defn}{Definition}
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{cor}[thm]{Corollary}
+\newtheorem{prop}{Proposition}
+\newtheorem{lem}[thm]{Lemma}
+\newtheorem{example}{Example}
+\newtheorem{conj}[thm]{Conjecture}
+\newtheorem{constr}[thm]{Construction}
+\newtheorem{note}{Remark}
+\newcommand{\bit}{\begin{itemize}}
+\newcommand{\eit}{\end{itemize}}
+\newcommand{\bcor}{\begin{cor}}
+\newcommand{\ecor}{\end{cor}}
+\newcommand{\beq}{\begin{equation}}
+\newcommand{\eeq}{\end{equation}}
+\newcommand{\beqn}{\begin{equation*}}
+\newcommand{\eeqn}{\end{equation*}}
+\newcommand{\bea}{\begin{eqnarray}}
+\newcommand{\eea}{\end{eqnarray}}
+\newcommand{\bean}{\begin{eqnarray*}}
+\newcommand{\eean}{\end{eqnarray*}}
+\newcommand{\ben}{\begin{enumerate}}
+\newcommand{\een}{\end{enumerate}}
+\newcommand{\bdefn}{\begin{defn}}
+\newcommand{\edefn}{\end{defn}}
+\newcommand{\bnote}{\begin{note}}
+\newcommand{\enote}{\end{note}}
+\newcommand{\bprop}{\begin{prop}}
+\newcommand{\eprop}{\end{prop}}
+\newcommand{\blem}{\begin{lem}}
+\newcommand{\elem}{\end{lem}}
+\newcommand{\bthm}{\begin{thm}}
+\newcommand{\ethm}{\end{thm}}
+\newcommand{\bconj}{\begin{conj}}
+\newcommand{\econj}{\end{conj}}
+\newcommand{\bconstr}{\begin{constr}}
+\newcommand{\econstr}{\end{constr}}
+\newcommand{\bpf}{\begin{proof}}
+\newcommand{\epf}{\end{proof}}
+\newcommand{\bprf}{{\em Proof: }}
+\newcommand{\bproof}{{\em Proof of }}
+\newcommand{\eproof}{\hfill $\Box$}
+\newcommand{\argmin}{\operatornamewithlimits{arg \ min}}
+\newcommand{\argmax}{\operatornamewithlimits{arg \ max}}
+
+\setlength\parindent{0pt} %noindent for all paragraphs
+\algnewcommand{\And}{\textbf{and}\xspace} 
+\def\today{\number\day\space\ifcase\month\or January\or February\or March\or April\or May\or June\or July\or August\or September\or October\or November\or December\fi\space\number\year} %the 'right' date format
+
+
+
+\title{CS 224d Project Proposal}
+\author{Govinda Kamath and Jesse Zhang}
+\date{\today}
+
+
+\begin{document}
+\maketitle
+ 
+\section{Problem Description}
+The genome of an organism is a long string of the nucleotides A, C, G, and T. The genome contains genes which are translated into proteins essential for life, and genes are regulated by a variety of epigenetic factors (e.g. transcription factors). Regions of the genome that are very far away from one another could influence the regulation of a particular gene. The purpose of this project is to explore how recurrent neural networks (in particular bidirectional LSTMs) can model and predict the long-range interactions within a genome. 
+
+\section{Data}
+ChIP-seq and ATAC-seq are two assays used to obtain the sequences of a cell type that are active. Several datasets are available online (ENCODE), and these datasets have both sequences obtained from multiple experiments corresponding to the areas of the genome that are active. If a dataset consists of $N$ sequences, we can obtain $N$ training examples from the dataset. The input will be one of the $N$ sequences, and the model will attempt to predict the other sequences. Each sequence will be broken into length-$k$ substrings or $k$-mers (a sequence with $k$-mers is analogous to a sentence with words).
+
+\section{Methodology}
+The training and testing of the model will be as follows:
+\begin{enumerate}
+	\item Map $k$-mers to vectors using methods such as word2vec or GloVe. 
+	\item Train an LSTM using the training examples.
+	\item Cross validate to select model hyper-parameters such as network structure, activation function, and regularization strength.
+	\item Given a new sequence, determine which parts of the genome are most relevant.
+\end{enumerate}
+
+\section{Related work}
+While several works (\cite{alipanahi2015predicting},\cite{kelley2015basset},\cite{quang2015danq},\cite{zhou2015predicting}) have used deep neural networks to predict how a sequence of nucleotides is regulated, none of them use a pure RNN architecture. Also, none of them attempt to predict long-range interactions within the genome.
+
+\section{Evaluation plan}
+We will evaluate our results by holding out some of the training data. We will then attempt to predict the relevant sequences given an input sequence. We expect that our model will fail to predict all of the sequences and simultaneously predict incorrect sequences, and we will quantify this performance using false negative and false positive rates. We will compare the performance of this model to a simple softmax regression (predicting multiple labels given a new sequence). 
+
+\bibliographystyle{plain}
+\bibliography{cs224d}
+\end{document}

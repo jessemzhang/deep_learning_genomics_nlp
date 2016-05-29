@@ -1,0 +1,112 @@
+\documentclass[11pt,onecolumn]{article}
+
+\usepackage[lmargin=0.75in,rmargin=0.75in,tmargin=.75in,bmargin=0.7in]{geometry}
+
+
+\usepackage[tbtags]{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{subfigure}
+\usepackage{cite}
+\usepackage{calc}
+\usepackage{color}
+\usepackage{epsfig}
+%\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage{enumerate}
+\usepackage{bm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+% \usepackage{cite}
+
+\newtheorem{defn}{Definition}
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{cor}[thm]{Corollary}
+\newtheorem{prop}{Proposition}
+\newtheorem{lem}[thm]{Lemma}
+\newtheorem{example}{Example}
+\newtheorem{conj}[thm]{Conjecture}
+\newtheorem{constr}[thm]{Construction}
+\newtheorem{note}{Remark}
+\newcommand{\bit}{\begin{itemize}}
+\newcommand{\eit}{\end{itemize}}
+\newcommand{\bcor}{\begin{cor}}
+\newcommand{\ecor}{\end{cor}}
+\newcommand{\beq}{\begin{equation}}
+\newcommand{\eeq}{\end{equation}}
+\newcommand{\beqn}{\begin{equation*}}
+\newcommand{\eeqn}{\end{equation*}}
+\newcommand{\bea}{\begin{eqnarray}}
+\newcommand{\eea}{\end{eqnarray}}
+\newcommand{\bean}{\begin{eqnarray*}}
+\newcommand{\eean}{\end{eqnarray*}}
+\newcommand{\ben}{\begin{enumerate}}
+\newcommand{\een}{\end{enumerate}}
+\newcommand{\bdefn}{\begin{defn}}
+\newcommand{\edefn}{\end{defn}}
+\newcommand{\bnote}{\begin{note}}
+\newcommand{\enote}{\end{note}}
+\newcommand{\bprop}{\begin{prop}}
+\newcommand{\eprop}{\end{prop}}
+\newcommand{\blem}{\begin{lem}}
+\newcommand{\elem}{\end{lem}}
+\newcommand{\bthm}{\begin{thm}}
+\newcommand{\ethm}{\end{thm}}
+\newcommand{\bconj}{\begin{conj}}
+\newcommand{\econj}{\end{conj}}
+\newcommand{\bconstr}{\begin{constr}}
+\newcommand{\econstr}{\end{constr}}
+\newcommand{\bpf}{\begin{proof}}
+\newcommand{\epf}{\end{proof}}
+\newcommand{\bprf}{{\em Proof: }}
+\newcommand{\bproof}{{\em Proof of }}
+\newcommand{\eproof}{\hfill $\Box$}
+\newcommand{\argmin}{\operatornamewithlimits{arg \ min}}
+\newcommand{\argmax}{\operatornamewithlimits{arg \ max}}
+
+\setlength\parindent{0pt} %noindent for all paragraphs
+\algnewcommand{\And}{\textbf{and}\xspace} 
+\def\today{\number\day\space\ifcase\month\or January\or February\or March\or April\or May\or June\or July\or August\or September\or October\or November\or December\fi\space\number\year} %the 'right' date format
+
+
+
+\title{CS 224d Project Proposal}
+\author{Govinda Kamath and Jesse Zhang}
+\date{\today}
+
+
+\begin{document}
+\maketitle
+ 
+\section{Problem Description}
+In a single cell RNA-seq experiment, one is interested in recovering the different types of cells present in a tissue. RNA transcripts become protein (which are the functional units of the cell), and therefore the reads (observed subsequences of a constant length) obtained from these transcripts are related the cell's type. The purpose of this project is to explore if a neural network can learn a relationship between reads and cell type by treating reads as sentences of $k$-mers (length $k$ strings of $A, C, T, G$).
+
+
+\section{Data}
+The data will be reads obtained from sequencing experiments where the cell type is known. We will use data from a popular recent single cell RNA-seq experiment by \cite{ZeiLin}, which studied mouse brain cells. This data set consists of $3005$ cells, of which are of two main types: astrocytes and interneurons. There seems to be enough data, as there are around $1,884,135,00e0$ reads in total, which should allow us to train models reasonably well. \\
+
+If the model works well, we will try the approach on other single cell assays like single cell ATAC-seq \cite{BueGre}. 
+
+\section{Methodology}
+Supervised training of the neural network will be performed by
+\begin{enumerate}
+	\item Mapping reads to vectors using methods such as word2vec
+	\item Feeding these vectors into the network using known cell type as the predicted label
+	\item Cross validating to select model hyper-parameters such as network structure and activation function. 
+\end{enumerate}
+
+After training (and use of a development set to set hyper-parameters), the model will be tested on a set of held-out data. Each read from a test cell will be fed into the model, and the cell will be classified as the most frequent output type. 
+
+\section{Related work}
+Usually in this setting, people cluster using a reference, which is a set of all possible RNA sequences that can be seen in the cell. There has been some interest in this problem recently \cite{NtrKamZhaPacTse}. A disadvantage of this however is that the reference is most likely incomplete, and there may be many rare transcripts that we do not really know of. Hence we propose to work reference-less in this project. There is very little work done in that direction. The ultimate goal of such a project would be to do unsupervised reference-less clustering, but we plan to work on the easier problem of classification here. \\
+
+While not much work has been done on treating the genome as a natural language, we will use NLP techniques taught in class to generate vectors from reads (such as word2vec and GloVe). 
+
+\section{Evaluation plan}
+We will evaluate out results by looking at the classification error rate of the network compared to simpler models such as logistic regression on a bag of words model (which is essentially trying to use per-cell $k$-mer counts to cluster.).
+
+\bibliographystyle{plain}
+\bibliography{cs224d}
+\end{document}
