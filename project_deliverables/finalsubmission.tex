@@ -49,14 +49,14 @@ In recent years, deep recurrent neural networks (RNNs) have allowed researchers 
 
 To confirm that an RNN can model the structure within a genomic sequence, we first train a simple character-level RNN to predict one of the four possible characters given the previous string of characters. If the ability of an RNN to predict the next character for a real genome is the same as for a random genome, then we will have to more carefully tweak our model until we can identify some signal. We will also use this simpler task to help choose a proper model architecture.
 
-Once we have empirical evidence that an RNN can capture the non-random structure within a genome, we will explore a sequence classification problem. Epigenetics is the study of how the genome is regulated by external factors. Biological experiments have shown that a given sequence is regulated by both nearby and very distant sequences. Specifically, biologists have been able to identify whether a particular genomic feature will be observed for a particular sequence. Examples of these features include
+Once we have empirical evidence that an RNN can capture the non-random structure within a genome, we explore a sequence classification problem. Epigenetics is the study of how the genome is regulated by external factors. Biological experiments have shown that subsequences of the human genome are often regulated by both nearby and very distant sequences Specifically, biologists have been able to identify whether a particular genomic feature will be observed for a particular sequence. Examples of these features include
 \begin{enumerate}
 	\item Transcription factors: proteins that bind to a particular sequence
 	\item DNase I hypersensitive sites: a sequence that is sensitive to cleavage by the DNase I enzyme
 	\item Histone marks: chemical modifications to histone proteins, biomolecules  which regulate certain sequences.
 \end{enumerate}
 
-These results are available via the ENCODE and Roadmap Epigenomics data releases. For each of many features, we will assess an RNN's ability to determine whether a given feature will be present based solely on the sequence.
+These results are available via the ENCODE and Roadmap Epigenomics data releases. For each of many features, we will assess an RNN's ability to predict whether a given feature will be present based solely on the sequence.
 
 \section{Related work}
 
@@ -78,7 +78,7 @@ $$
 
 where $n$ is the number of training samples (roughly the length of our genome), $|V|$ is the size of our vocabulary, $\hat{y}^{(t)}_i$ is the predicted probability of the predicted word at time $t$ being word $i$, and $\mathbf{y}^{(t)}$ is a one-hot vector describing the actual word at time $t$.
 
-From the above experiment, we selected a cell type to use for the multitask learning model. We used a bidirectional GRU for character-level processing. Each character in the input sequence is mapped to some low-dimensional embedding. Intuitively, a genetic sequences can be regulated by both flanking sequences, and therefore bidirectionality is a crucial part of the architecture. The outputs of the forward and backward RNNs are fed through a softmax layer. For each of $K$ tasks, a prediction of 0 or 1 is made, indicated whether or not a particular feature should be observed for the input sequence. For all tasks, all weights are shared before the final softmax. Each tasks has its own weight and bias matrices at the softmax layer. The overall architecture is summarized in Figure 1.
+From the above experiment, we selected a cell type to use for the multitask learning model. We used a bidirectional GRU for character-level processing. Each character in the input sequence is mapped to some low-dimensional embedding. Intuitively, a genetic sequences can be regulated by both flanking sequences, and therefore bidirectionality is a crucial part of the architecture. The outputs of the forward and backward RNNs are fed through a softmax layer. For each of $K$ tasks, a prediction of 0 or 1 is made, indicating whether or not a particular feature should be observed for the input sequence. For all tasks, all weights are shared before the final softmax. Each task has its own weight and bias matrices at the softmax layer. The overall architecture is summarized in Figure 1. The overall loss is the geometric average perplexity across all $K$ tasks. 
 
 \begin{figure*}[!htb]
 	\caption{The network architecture used to perform multitask prediction for a given input genomic sequence. Each character in the input sequence is mapped to a low-dimensional embedding, which is fed into a bi-directional recurrent neural network consisting of gated recurrent units. The outputs of the last GRU in the forwards and backwards RNNs are concatenated before being fed to one of $K$ prediction tasks. A final prediction of 1 or 0 is made for each task.}
@@ -100,7 +100,7 @@ For the character-level genome prediction task, four genomes were prepared:
 	\item The length-23,264,338 genome for malaria
 \end{enumerate}
 
-For the multitask prediction task, we used a random subset of the dataset used in the DanQ \cite{quang2015danq} and DeepSEA \cite{zhou2015predicting} papers. We chose 80,000 sequence-label pairs for the training dataset, 8000 pairs for the testing dataset, and 2000 for the validation dataset. Each sequence has a length of exactly 1000. All sequences were obtained from experiments involving human cells. The set of labels describes 919 binary prediction tasks, and each indicates whether part of a particular sequence was accessible for a ChIP-seq or DNase-seq experiment. Both of these types of experiments evaluate the locations where one of the three features (see introduction) can bind. The dataset is noisy, and about 10\% of the tasks' labels were all 0.
+For the multitask prediction task, we used a random subset of the dataset used in the DanQ \cite{quang2015danq} and DeepSEA \cite{zhou2015predicting} papers. The dataset was collected from experiments reported in the ENCODE and Roadmap Epigenomics data releases. We chose 80,000 sequence-label pairs for the training dataset, 8000 pairs for the testing dataset, and 2000 for the validation dataset. Each sequence has a length of exactly 1000. All sequences are length-200 subsequences of the human genome with 400 bp flanking regions. The set of labels describes 919 binary prediction tasks, and each indicates whether part of a particular sequence was observed as accessible for a particular ChIP-seq or DNase-seq experiment (i.e. if a ChIP-seq or DNase-seq peak for a particular experiment overlaps with the 200-bp region by at least half of the length of the peak). Both of these types of experiments evaluate the locations where one of the three features (see introduction) can bind. The dataset is noisy, and about 10\% of the tasks' labels were all 0.
 
 \subsection{Character-Level Genome Prediction Results}
 
@@ -119,8 +119,9 @@ A baseline was drawn by first mapping each sequence in the training set to a fea
 Instead, we used a feature mapping inspired by the authors of \cite{quang2015danq}. We used a $k$-mer bag of words method where each length $k$ subsequence of an input sequence was counted. We used $k = 1, 2, 3, 4, 5$, resulting in $4^1 + 4^2+4^3+4^4+4^5 = 1364$ features. For example, the sequence \texttt{ACTGG} would produce a length-1364 feature vector where the entries corresponding to the $k$-mers \texttt{A}, \texttt{C}, \texttt{T}, \texttt{AC}, \texttt{CT}, \texttt{TG}, \texttt{GG}, \texttt{ACT}, \texttt{CTG}, \texttt{TGG}, \texttt{ACTG}, \texttt{CTGG}, and \texttt{ACTGG} would each equal 1, and the entry corresponding to \texttt{G} would equal 2. All other entries equal 0.
 
 Logistic regression was performed using the Python module \texttt{scikit-learn}. Default parameters were used except for the regularization constant of the $\ell_2$ regularization term, which was set to $10^{-6}$. A separate logistic regression model was trained for each of the 919 tasks on all 80,000 training examples. The performance of a model was evaluated based on the its prediction accuracy on the 8000 training examples. Because all examples are severely skewed towards the 0 class (i.e. for all tasks, there are significantly more examples without the feature than with the feature), the raw error rate is not a good indicator of prediction accuracy. We instead looked at the F1 score, defined as:
-$$ F_1 = 2 \cdot \frac{\mbox{precision} \cdot \mbox{recall} }{\mbox{precision} + \mbox{recall}}. $$
-As expected, the logistic regression model performed poorly on most of the tasks, achieve a max F1 score of 
+$$ F_1 = 2 \cdot \frac{\mbox{precision} \cdot \mbox{recall} }{\mbox{precision} + \mbox{recall}} $$
+
+where precision is the proportion of correct positive predictions, and recall is the proportion of positive examples that received a positive prediction. As expected, the logistic regression model performed poorly on most of the tasks, achieve a max F1 score of 
 
 \subsection{Multitask Prediction Results}
 
