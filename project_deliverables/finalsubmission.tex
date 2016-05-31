@@ -41,7 +41,7 @@ Stanford, CA 94305 \\
 \maketitle
 
 \begin{abstract}
-We explore how deep recurrent neural network architectures can be used to capture the structure within a genetic sequence. We first confirm that a character-level RNN can capture the non-random parts of DNA by comparing the perplexity obtained after training on a real genome to that obtained after training on a random sequence of nucleotides. We then train a bidirectional character-level RNN to predict whether a given genomic sequence will interact with a variety of transcription factors, DNase I hypersensitive sites, and histone marks. Because multiple biological objects can interact with a given sequence, we cast this latter problem as a multitask learning problem.
+We explore how deep recurrent neural network (RNN) architectures can be used to capture the structure within a genetic sequence. We first confirm that a character-level RNN can capture the non-random parts of DNA by comparing the perplexity obtained after training on a real genome to that obtained after training on a random sequence of nucleotides. We then train a bidirectional character-level RNN to predict whether a given genomic sequence will interact with a variety of transcription factors, DNase I hypersensitive sites, and histone marks. Because multiple biological objects can interact with a given sequence, we cast this latter problem as a multitask learning problem. We empirically show how a deep network can outperform a baseline model a significant majority of 919 binary labeling tasks. 
 \end{abstract}
 
 \section{Introduction}
@@ -100,7 +100,7 @@ For the character-level genome prediction task, four genomes were prepared:
 	\item The length-23,264,338 genome for malaria
 \end{enumerate}
 
-For the multitask prediction task, we used a random subset of the dataset used in the DanQ \cite{quang2015danq} and DeepSEA \cite{zhou2015predicting} papers. The dataset was collected from experiments reported in the ENCODE \cite{encode2012integrated} and Roadmap Epigenomics \cite{kundaje2015integrative} data releases. We chose 80,000 sequence-label pairs for the training dataset, 8000 pairs for the testing dataset, and 2000 for the validation dataset. Each sequence has a length of exactly 1000. All sequences are length-200 subsequences of the human genome with 400 bp flanking regions. The length-200 portion is nonoverlapping across different sequences. The set of labels describes 919 binary prediction tasks, and each indicates whether part of a particular sequence was observed as accessible for a particular ChIP-seq or DNase-seq experiment (i.e. if a ChIP-seq or DNase-seq peak for a particular experiment overlaps with the 200-bp region by at least half of the length of the peak). Both of these types of experiments evaluate the locations where one of the three features (see introduction) can bind. The dataset is noisy, and about 10\% of the tasks' labels were all 0. In general, tasks are strongly skewed towards negative examples. For 421 of the 919 tasks, less than 1\% of the training examples were labeled 1.
+For the multitask prediction task, we used a random subset of the dataset used in the DanQ \cite{quang2015danq} and DeepSEA \cite{zhou2015predicting} papers. The dataset was collected from experiments reported in the ENCODE \cite{encode2012integrated} and Roadmap Epigenomics \cite{kundaje2015integrative} data releases. We chose 80,000 sequence-label pairs for the training set, 8000 pairs for the testing set, and 2000 for the validation set. Each sequence has a length of exactly 1000. All sequences are length-200 subsequences of the human genome with 400 bp flanking regions. The length-200 portion is nonoverlapping across different sequences. The set of labels describes 919 binary prediction tasks, and each indicates whether part of a particular sequence was observed as accessible for a particular ChIP-seq or DNase-seq experiment (i.e. if a ChIP-seq or DNase-seq peak for a particular experiment overlaps with the 200-bp region by at least half of the length of the peak). Both of these types of experiments evaluate the locations where one of the three features (see introduction) can bind. The dataset is noisy, and about 10\% of the tasks' labels were all 0. In general, tasks are strongly skewed towards negative examples. For 421 of the 919 tasks, less than 1\% of the training examples were labeled 1.
 
 Due to computational limitations, training an RNN on all 1000 characters in each example was difficult. The RNNs discussed below were instead trained on the middle 100 characters of each sequence. For a fair comparison, the baseline model was trained on the same set of truncated sequences. 
 
@@ -125,21 +125,46 @@ $$ F_1 = 2 \cdot \frac{\mbox{precision} \cdot \mbox{recall} }{\mbox{precision} +
 
 where precision is the proportion of correct positive predictions, and recall is the proportion of positive examples that received a positive prediction. 
 
-To account for the fact that less than 1\% of the training examples were labeled 1, we looked only at the 100 tasks where logistic regression performed the best and where at least 1\% of the training examples were labeled 1. 
+To account for the fact that less than 1\% of the training examples were labeled 1, we first looked only at the 100 tasks where logistic regression performed the best and where at least 1\% of the training examples were labeled 1.
 
 \subsection{Multitask Prediction Results}
 
 The final model used a learning rate of 0.001 for an Adam Optimizer, 2 layers, an embedding size of 2 (as there were only 4 unique characters), hidden layer sizes of 128, a dropout keep probability of 0.95, and batch size of 20. The RNN was bidirectional and used GRU units with tanh activation function. The RNN processed all 100 characters of each input sequence. The model was trained for 61 epochs on the 80,000 training examples, running for approximately 3 days using an NVIDIA GRID K520 GPU on an Amazon Web Services Elastic Compute Cloud instance.
 
-Figure 2 shows how the loss function (average perplexity across all examples and tasks) changes for both the validation and test datasets as the number of epochs increases.
+Figure 2 shows how the loss function (average perplexity across all examples and tasks) changes for both the validation and test sets as the number of epochs increases. We see that while the training loss continues to decrease, the validation loss has plateaued around a perplexity of 1.087.
 
 \begin{figure*}[!htb]
-	\caption{The network architecture used to perform multitask prediction for a given input genomic sequence. Each character in the input sequence is mapped to a low-dimensional embedding, which is fed into a bi-directional recurrent neural network consisting of gated recurrent units. The outputs of the last GRU in the forwards and backwards RNNs are concatenated before being fed to one of $K$ prediction tasks. A final prediction of 1 or 0 is made for each task.}
+	\caption{The training and validation losses as functions of number of training epochs for the bidirectional RNN model. Training was done with 80,000 length-100 sequences across 919 binary labeling tasks.}
 	\centering
-	\includegraphics[scale=0.4]{Figure1}
+	\includegraphics[scale=0.6]{loss_100}
 \end{figure*}
 
+The weights from all epochs were tested on the test set. Figure 3 shows the F1 scores for logistic regression (blue) and the RNN with weights corresponding to the lowest validation perplexity (green). We also show the max F1 score achieved across all weights from all training epochs.
+
+\begin{figure*}[!htb]
+	\caption{F1 scores for the logistic regression and RNN models for the 20 tasks where logistic regression performed the best. Each selected task had at least 1\% positive training examples. The RNN epoch corresponding to the lowest validation error was epoch 33.}
+	\centering
+	\includegraphics[scale=0.3]{F1_scores}
+\end{figure*}
+
+The RNN's optimal weights were achieved at epoch 33. For the top 100 tasks where logistic regression performed the best (and where at least 1\% of the training examples were labeled 1), the RNN with epoch 33 weights achieved a higher F1 score for 97 of the tasks. On average, the RNN achieved scores that were 1.668 times greater. Taking the max F1 score for each task over all epochs, the RNN beats logistic regression in all 100 tasks, achieving scores that were 2.004 times greater on average. For all 915 tasks with greater than 0 positive examples in the training set, the optimal weights won on 79.9\% of the tasks, and the maximum F1 score over all epochs won on 87.2\% of the tasks. Overall, the RNN outperforms the logistic regression baseline for the classification problem.
+
+With over half of the 919 tasks having less than 1\% positive training examples, we expect the RNN to suffer a significant decrease in performance when these tasks are included. RNN are notoriously dependent on large amounts of training examples, and for these tasks there existed less than 800 training examples. Despite this, the correlation between tasks likely allowed the RNN to leverage examples from other tasks to learn more about a given task. 
+
 \section{Conclusion}
+In this project, we used RNNs to perform character-level prediction on real genomes. After confirming that a deep neural network can indeed capture structure within a real genome, we trained a large model for multitask prediction with about 740,000 parameters. We demonstrated that though the RNN takes a while to train, the result outperforms a logistic regression baseline significantly.
+
+The fact that the RNN outperformed the baseline in almost every task with greater than 800 training examples demonstrates how the RNN can make more effective usage of the information in the length-100 sequences. Additionally, for this project only a small portion of the entire dataset was actually used. Due to computational and time constraints, the RNN described in this project was trained, developed, and tested using 90,000 total length-100 sequences. The original dataset from \cite{zhou2015predicting} contains 4,863,024 length-1000 sequences, about 540 times more data. Because the sequences obtained in the experiments and the human genome are both known, we can increase the lengths of these sequences even further. We can also break longer sequences into shorter overlapping sequences to generate more examples. We expect that further training on the entire dataset would lead to monumental gains in performance. 
+
+This project demonstrated how an intuitively constructed deep bidirectional RNN with GRUs can capture sophisticated patterns in short 100-character sequences of the human genome. Several avenues for improvement exist, including:
+\begin{enumerate}
+	\item Incorporating more data (discussed above). A first step would involve extending the 100-character sequences to the 200-character sequences from which the authors of \cite{zhou2015predicting} generated the labels. 
+	\item Modifying the network architecture to have more layers or larger hidden layers
+	\item Designing an RNN cell that's better suited for the very long-rage information associated with genomic sequences. An example of this is the a clockwork RNN \cite{koutnik2014clockwork} architecture.
+	\item Finding a distributed representation of genomic ``words" and initializing a word-based (rather than character-based) RNN model. Defining a genomic word will also be a challenge.
+\end{enumerate}
+
+While this project is only a first step, ultimately we hope to create a neural network that robustly models the intricacies of the human genome. Ideally, the model will be able to explain which subsequences of the genome interact by incorporating how proteins interact with specific sequences. In practice, such a model will able to predict how an entire organism's identity can change with small changes to a part of the organisms genome. This will allow us to better understand how mutations (such as single nucleotide polymorphisms) can change phenotypes, allowing scientists to design more effective treatments for biological imperfections.
  
 \bibliographystyle{plain}
 \bibliography{cs224d}
