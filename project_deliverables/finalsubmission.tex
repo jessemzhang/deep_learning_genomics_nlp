@@ -100,7 +100,9 @@ For the character-level genome prediction task, four genomes were prepared:
 	\item The length-23,264,338 genome for malaria
 \end{enumerate}
 
-For the multitask prediction task, we used a random subset of the dataset used in the DanQ \cite{quang2015danq} and DeepSEA \cite{zhou2015predicting} papers. The dataset was collected from experiments reported in the ENCODE \cite{encode2012integrated} and Roadmap Epigenomics \cite{kundaje2015integrative} data releases. We chose 80,000 sequence-label pairs for the training dataset, 8000 pairs for the testing dataset, and 2000 for the validation dataset. Each sequence has a length of exactly 1000. All sequences are length-200 subsequences of the human genome with 400 bp flanking regions. The length-200 portion is nonoverlapping across different sequences. The set of labels describes 919 binary prediction tasks, and each indicates whether part of a particular sequence was observed as accessible for a particular ChIP-seq or DNase-seq experiment (i.e. if a ChIP-seq or DNase-seq peak for a particular experiment overlaps with the 200-bp region by at least half of the length of the peak). Both of these types of experiments evaluate the locations where one of the three features (see introduction) can bind. The dataset is noisy, and about 10\% of the tasks' labels were all 0.
+For the multitask prediction task, we used a random subset of the dataset used in the DanQ \cite{quang2015danq} and DeepSEA \cite{zhou2015predicting} papers. The dataset was collected from experiments reported in the ENCODE \cite{encode2012integrated} and Roadmap Epigenomics \cite{kundaje2015integrative} data releases. We chose 80,000 sequence-label pairs for the training dataset, 8000 pairs for the testing dataset, and 2000 for the validation dataset. Each sequence has a length of exactly 1000. All sequences are length-200 subsequences of the human genome with 400 bp flanking regions. The length-200 portion is nonoverlapping across different sequences. The set of labels describes 919 binary prediction tasks, and each indicates whether part of a particular sequence was observed as accessible for a particular ChIP-seq or DNase-seq experiment (i.e. if a ChIP-seq or DNase-seq peak for a particular experiment overlaps with the 200-bp region by at least half of the length of the peak). Both of these types of experiments evaluate the locations where one of the three features (see introduction) can bind. The dataset is noisy, and about 10\% of the tasks' labels were all 0. In general, tasks are strongly skewed towards negative examples. For 421 of the 919 tasks, less than 1\% of the training examples were labeled 1.
+
+Due to computational limitations, training an RNN on all 1000 characters in each example was difficult. The RNNs discussed below were instead trained on the middle 100 characters of each sequence. For a fair comparison, the baseline model was trained on the same set of truncated sequences. 
 
 \subsection{Character-Level Genome Prediction Results}
 
@@ -114,16 +116,28 @@ While the perplexity being less than random is reassuring, the results obtained 
 
 \subsection{Multitask Prediction Baseline and Evaluation Metric}
 
-A baseline was drawn by first mapping each sequence in the training set to a feature vector and then running the vector-label pairs through a simple logistic regression model. The first feature mapping used involving mapping each of the 4 nucleotides to an integer 0, 1, 2, or 3. As expected, this feature mapping performed quite poorly as the mapping fails to capture how adjacent characters interact.
+Just as in \cite{quang2015danq}, a baseline was drawn by first mapping each sequence in the training set to a feature vector and then running the vector-label pairs through a simple logistic regression model. The first feature mapping used involving mapping each of the 4 nucleotides to an integer 0, 1, 2, or 3. As expected, this feature mapping performed quite poorly as the mapping fails to capture how adjacent characters interact.
 
 Instead, we used a feature mapping inspired by the authors of \cite{quang2015danq}. We used a $k$-mer bag of words method where each length $k$ subsequence of an input sequence was counted. We used $k = 1, 2, 3, 4, 5$, resulting in $4^1 + 4^2+4^3+4^4+4^5 = 1364$ features. For example, the sequence \texttt{ACTGG} would produce a length-1364 feature vector where the entries corresponding to the $k$-mers \texttt{A}, \texttt{C}, \texttt{T}, \texttt{AC}, \texttt{CT}, \texttt{TG}, \texttt{GG}, \texttt{ACT}, \texttt{CTG}, \texttt{TGG}, \texttt{ACTG}, \texttt{CTGG}, and \texttt{ACTGG} would each equal 1, and the entry corresponding to \texttt{G} would equal 2. All other entries equal 0.
 
-Logistic regression was performed using the Python module \texttt{scikit-learn}. Default parameters were used except for the regularization constant of the $\ell_2$ regularization term, which was set to $10^{-6}$. A separate logistic regression model was trained for each of the 919 tasks on all 80,000 training examples. The performance of a model was evaluated based on the its prediction accuracy on the 8000 training examples. Because all examples are severely skewed towards the 0 class (i.e. for all tasks, there are significantly more examples without the feature than with the feature), the raw error rate is not a good indicator of prediction accuracy. We instead looked at the F1 score, defined as:
+Logistic regression was performed using the Python module \texttt{scikit-learn}. Default parameters were used except for the regularization constant of the $\ell_2$ regularization term, which was set to $10^{-6}$. A separate logistic regression model was trained for each of the 919 tasks on all 80,000 training examples (with length-100 sequences). The performance of a model was evaluated based on the its prediction accuracy on the 8000 training examples. Note that a validation set was not used here; each logistic regression model was simply trained until the default tolerance of 0.0001 was reached. Because all examples are severely skewed towards the 0 class (i.e. for all tasks, there are significantly more examples without the feature than with the feature), the raw error rate is not a good indicator of prediction accuracy. We instead looked at the F1 score, defined as:
 $$ F_1 = 2 \cdot \frac{\mbox{precision} \cdot \mbox{recall} }{\mbox{precision} + \mbox{recall}} $$
 
-where precision is the proportion of correct positive predictions, and recall is the proportion of positive examples that received a positive prediction. As expected, the logistic regression model performed poorly on most of the tasks, achieve a max F1 score of 
+where precision is the proportion of correct positive predictions, and recall is the proportion of positive examples that received a positive prediction. 
+
+To account for the fact that less than 1\% of the training examples were labeled 1, we looked only at the 100 tasks where logistic regression performed the best and where at least 1\% of the training examples were labeled 1. 
 
 \subsection{Multitask Prediction Results}
+
+The final model used a learning rate of 0.001 for an Adam Optimizer, 2 layers, an embedding size of 2 (as there were only 4 unique characters), hidden layer sizes of 128, a dropout keep probability of 0.95, and batch size of 20. The RNN was bidirectional and used GRU units with tanh activation function. The RNN processed all 100 characters of each input sequence. The model was trained for 61 epochs on the 80,000 training examples, running for approximately 3 days using an NVIDIA GRID K520 GPU on an Amazon Web Services Elastic Compute Cloud instance.
+
+Figure 2 shows how the loss function (average perplexity across all examples and tasks) changes for both the validation and test datasets as the number of epochs increases.
+
+\begin{figure*}[!htb]
+	\caption{The network architecture used to perform multitask prediction for a given input genomic sequence. Each character in the input sequence is mapped to a low-dimensional embedding, which is fed into a bi-directional recurrent neural network consisting of gated recurrent units. The outputs of the last GRU in the forwards and backwards RNNs are concatenated before being fed to one of $K$ prediction tasks. A final prediction of 1 or 0 is made for each task.}
+	\centering
+	\includegraphics[scale=0.4]{Figure1}
+\end{figure*}
 
 \section{Conclusion}
  
