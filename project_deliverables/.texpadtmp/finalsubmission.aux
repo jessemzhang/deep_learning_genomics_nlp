@@ -14,10 +14,10 @@
 \fi}
 \global\let\hyper@last\relax 
 \gdef\HyperFirstAtBeginDocument#1{#1}
-\providecommand*\HyPL@Entry[1]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
 \citation{encode2012integrated}
 \citation{kundaje2015integrative}
-\HyPL@Entry{0<</S/D>>}
 \@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}}
 \citation{zhou2015predicting}
 \citation{alipanahi2015predicting}
@@ -41,7 +41,7 @@
 \citation{zhou2015predicting}
 \citation{zhou2015predicting}
 \citation{koutnik2014clockwork}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces F1 scores for the logistic regression and RNN models for the 20 tasks where logistic regression performed the best. Each selected task had at least 1\% positive training examples. The RNN epoch corresponding to the lowest validation error was epoch 33.}}{6}{figure.3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces F1 scores for the logistic regression and RNN models for the 498 tasks with at least 800 positive training examples (out of 80000 total examples). The RNN epoch corresponding to the lowest validation error was epoch 33. Tasks where logistic regression achieved an F1 score of 0 were sorted instead by the F1 scores of the RNN with weights from epoch 33.}}{6}{figure.3}}
 \@writefile{toc}{\contentsline {section}{\numberline {5}Conclusion}{6}{section.5}}
 \bibstyle{plain}
 \bibdata{cs224d}

@@ -126,7 +126,7 @@ $$ F_1 = 2 \cdot \frac{\mbox{precision} \cdot \mbox{recall} }{\mbox{precision} +
 
 where precision is the proportion of correct positive predictions, and recall is the proportion of positive examples that received a positive prediction. 
 
-To account for the fact that less than 1\% of the training examples were labeled 1, we first looked only at the 100 tasks where logistic regression performed the best and where at least 1\% of the training examples were labeled 1.
+To account for the fact that less than 1\% of the training examples were labeled 1, we looked only at tasks where at least 1\% of the training examples were labeled 1 (498 of the 919 tasks).
 
 \subsection{Multitask Prediction Results}
 
@@ -144,13 +144,13 @@ The weights from all epochs were tested on the test set. Figure 3 shows the F1 s
 
 \begin{figure*}[!htb]
 	\centering
-	\includegraphics[scale=0.3]{F1_scores}
-	\caption{F1 scores for the logistic regression and RNN models for the 20 tasks where logistic regression performed the best. Each selected task had at least 1\% positive training examples. The RNN epoch corresponding to the lowest validation error was epoch 33.}
+	\includegraphics[scale=0.6]{F1_scores_498}
+	\caption{F1 scores for the logistic regression and RNN models for the 498 tasks with at least 800 positive training examples (out of 80000 total examples). The RNN epoch corresponding to the lowest validation error was epoch 33. Tasks where logistic regression achieved an F1 score of 0 were sorted instead by the F1 scores of the RNN with weights from epoch 33.}
 \end{figure*}
 
-The RNN's optimal weights were achieved at epoch 33. For the top 100 tasks where logistic regression performed the best (and where at least 1\% of the training examples were labeled 1), the RNN with epoch 33 weights achieved a higher F1 score for 97 of the tasks. On average, the RNN achieved scores that were 1.668 times greater. Taking the max F1 score for each task over all epochs, the RNN beats logistic regression in all 100 tasks, achieving scores that were 2.004 times greater on average. For all 915 tasks with greater than 0 positive examples in the training set, the optimal weights won on 79.9\% of the tasks, and the maximum F1 score over all epochs won on 87.2\% of the tasks. Overall, the RNN outperforms the logistic regression baseline for the classification problem.
+The RNN's optimal weights were achieved at epoch 33. For 498 tasks where at least 1\% of the training examples were labeled 1, the RNN with epoch 33 weights achieved a higher F1 score for 408 or 81.9\% of the tasks. On average, the RNN achieved scores that were greater by 0.091. Taking the max F1 score for each task over all epochs, the RNN beats logistic regression in 471 or 94.6\% of the tasks, achieving F1 scores that were greater by 0.131 on average. When enough positive training examples are present, the RNN outperforms the logistic regression baseline for the classification problem.
 
-With over half of the 919 tasks having less than 1\% positive training examples, we expect the RNN to suffer a significant decrease in performance when these tasks are included. RNN are notoriously dependent on large amounts of training examples, and for these tasks there existed less than 800 training examples. Despite this, the correlation between tasks likely allowed the RNN to leverage examples from other tasks to learn more about a given task. 
+For the 421 tasks with less than than 800 positive examples in the training set, the optimal weights won on 43.2\% of the tasks, and the maximum F1 score over all epochs won on 65.6\% of the tasks. With so few positive training examples for these tasks, we expect the RNN to suffer a significant decrease in performance because RNNs are notoriously dependent on large amounts of training examples. Despite this, the correlation between tasks likely allowed the RNN to leverage examples from other tasks to learn more about a given task, resulting in comparable performance from the RNN.
 
 \section{Conclusion}
 In this project, we used RNNs to perform character-level prediction on real genomes. After confirming that a deep neural network can indeed capture structure within a real genome, we trained a large model for multitask prediction with about 740,000 parameters. We demonstrated that though the RNN takes a while to train, the result outperforms a logistic regression baseline significantly.
