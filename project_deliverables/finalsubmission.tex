@@ -56,7 +56,7 @@ Once we have empirical evidence that an RNN can capture the non-random structure
 	\item Histone marks: chemical modifications to histone proteins, biomolecules  which regulate certain sequences.
 \end{enumerate}
 
-These results are available via the ENCODE and Roadmap Epigenomics data releases. For each of many features, we will assess an RNN's ability to predict whether a given feature will be present based solely on the sequence.
+These results are available via the ENCODE \cite{encode2012integrated} and Roadmap Epigenomics \cite{kundaje2015integrative} data releases. For each of many features, we will assess an RNN's ability to predict whether a given feature will be present based solely on the sequence.
 
 \section{Related work}
 
@@ -100,7 +100,7 @@ For the character-level genome prediction task, four genomes were prepared:
 	\item The length-23,264,338 genome for malaria
 \end{enumerate}
 
-For the multitask prediction task, we used a random subset of the dataset used in the DanQ \cite{quang2015danq} and DeepSEA \cite{zhou2015predicting} papers. The dataset was collected from experiments reported in the ENCODE and Roadmap Epigenomics data releases. We chose 80,000 sequence-label pairs for the training dataset, 8000 pairs for the testing dataset, and 2000 for the validation dataset. Each sequence has a length of exactly 1000. All sequences are length-200 subsequences of the human genome with 400 bp flanking regions. The length-200 portion is nonoverlapping across different sequences. The set of labels describes 919 binary prediction tasks, and each indicates whether part of a particular sequence was observed as accessible for a particular ChIP-seq or DNase-seq experiment (i.e. if a ChIP-seq or DNase-seq peak for a particular experiment overlaps with the 200-bp region by at least half of the length of the peak). Both of these types of experiments evaluate the locations where one of the three features (see introduction) can bind. The dataset is noisy, and about 10\% of the tasks' labels were all 0.
+For the multitask prediction task, we used a random subset of the dataset used in the DanQ \cite{quang2015danq} and DeepSEA \cite{zhou2015predicting} papers. The dataset was collected from experiments reported in the ENCODE \cite{encode2012integrated} and Roadmap Epigenomics \cite{kundaje2015integrative} data releases. We chose 80,000 sequence-label pairs for the training dataset, 8000 pairs for the testing dataset, and 2000 for the validation dataset. Each sequence has a length of exactly 1000. All sequences are length-200 subsequences of the human genome with 400 bp flanking regions. The length-200 portion is nonoverlapping across different sequences. The set of labels describes 919 binary prediction tasks, and each indicates whether part of a particular sequence was observed as accessible for a particular ChIP-seq or DNase-seq experiment (i.e. if a ChIP-seq or DNase-seq peak for a particular experiment overlaps with the 200-bp region by at least half of the length of the peak). Both of these types of experiments evaluate the locations where one of the three features (see introduction) can bind. The dataset is noisy, and about 10\% of the tasks' labels were all 0.
 
 \subsection{Character-Level Genome Prediction Results}
 
