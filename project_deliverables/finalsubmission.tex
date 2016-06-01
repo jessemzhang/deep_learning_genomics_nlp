@@ -162,7 +162,7 @@ The fact that the RNN outperformed the baseline in almost every task with greate
 This project demonstrated how an intuitively constructed deep bidirectional RNN with GRUs can capture sophisticated patterns in short 100-character sequences of the human genome. Several avenues for improvement exist, including:
 \begin{enumerate}
 	\item Incorporating more data (discussed above). A first step would involve extending the 100-character sequences to the 200-character sequences from which the authors of \cite{zhou2015predicting} generated the labels. 
-	\item Modifying the network architecture to have more layers or larger hidden layers
+	\item Tweaking hyperparameters, for example adding more layers, increasing the number of hidden layers, and testing different activation functions
 	\item Designing an RNN cell that's better suited for the very long-rage information associated with genomic sequences. An example of this is the a clockwork RNN \cite{koutnik2014clockwork} architecture.
 	\item Finding a distributed representation of genomic ``words" and initializing a word-based (rather than character-based) RNN model. Defining a genomic word will also be a challenge.
 \end{enumerate}
