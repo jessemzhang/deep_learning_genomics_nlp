@@ -68,6 +68,8 @@ DanQ \cite{quang2015danq}, published in December 2015, incorporates a bidirectio
 
 Each of these tools feeds a one-hot encoding of an input sequence into a convolution layer. In other words, the networks operate on a $4\times L$ matrix obtained from a length-$L$ sequence. 
 
+Additionally, each tool discussed above uses a convolutional layer first. Convolutional layers require fixed sizes (e.g. each convolution is over a specific number of input characters), which is disadvantageous when one does not know the exact sizes of important subsequences. Introducing several different sets of convolutions with fully connected layers introduces several more parameters. For these reasons, a recurrent neural network with no convolutional layers seems a reasonable first approach for analyzing genomic sequences.
+
 \section{Approach}
 
 All RNN models in this project were built using Google's \texttt{TensorFlow} Python package. For the character-level genome modeling task, we test a variety of RNN-based neural network architectures including gated recurrent units (GRUs) and long-short-term-memory RNNs (LSTMs). We experiment with a variety of hyperparameters on multiple genomes in order to assess the robustness of a given model. We measure the ability of a model to fit a given dataset using the average perplexity across all character prediction tasks:
