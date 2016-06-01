@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.15 (TeX Live 2014) (preloaded format=pdflatex 2014.5.25)  31 MAY 2016 16:29
+This is pdfTeX, Version 3.14159265-2.6-1.40.15 (TeX Live 2014) (preloaded format=pdflatex 2014.5.25)  31 MAY 2016 17:03
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -274,16 +274,19 @@ File: F1_scores_498.png Graphic file (type png)
  <use F1_scores_498.png>
 Package pdftex.def Info: F1_scores_498.png used on input line 147.
 (pdftex.def)             Requested size: 346.89867pt x 173.44933pt.
- [5 <./loss_100.png>] [6 <./F1_scores_498.png>] (/Users/Jesse/Desktop/deep_learning_genomics_nlp/project_deliverables/.texpadtmp/finalsubmission.bbl)
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 173.
+ [5 <./loss_100.png>]
+Underfull \vbox (badness 1264) has occurred while \output is active []
+
+ [6 <./F1_scores_498.png>] (/Users/Jesse/Desktop/deep_learning_genomics_nlp/project_deliverables/.texpadtmp/finalsubmission.bbl)
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 175.
  [7]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 173.
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 175.
  (/Users/Jesse/Desktop/deep_learning_genomics_nlp/project_deliverables/.texpadtmp/finalsubmission.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 173.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 173.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 175.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 175.
 Package rerunfilecheck Info: File `finalsubmission.out' has not changed.
 (rerunfilecheck)             Checksum: <no file>.
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 173.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 175.
  ) 
 Here is how much of TeX's memory you used:
  5770 strings out of 493117
@@ -292,9 +295,9 @@ Here is how much of TeX's memory you used:
  9141 multiletter control sequences out of 15000+600000
  14794 words of font info for 32 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 37i,8n,39p,1365b,373s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 37i,8n,39p,1365b,395s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2014/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2014/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></usr/local/texlive/2014/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2014/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2014/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2014/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on /Users/Jesse/Desktop/deep_learning_genomics_nlp/project_deliverables/.texpadtmp/finalsubmission.pdf (7 pages, 789597 bytes).
+Output written on /Users/Jesse/Desktop/deep_learning_genomics_nlp/project_deliverables/.texpadtmp/finalsubmission.pdf (7 pages, 789918 bytes).
 PDF statistics:
  179 PDF objects out of 1000 (max. 8388607)
  150 compressed objects within 2 object streams
