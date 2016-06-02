@@ -156,6 +156,8 @@ For the 421 tasks with less than than 800 positive examples in the training set,
 
 Additionally, taking the max F1 scores over all epochs resulted in significant performance gains over using just the weights at any one epoch. This suggests the model sacrificed accuracy for some tasks in order to gain accuracy for other tasks. With 919 tasks, this may not be too surprising. More nodes at the hidden layer could alleviate this, but the model would need then more time for training.
 
+We also took a look at how the F1 score for the RNN changes as a function of number of positive training examples. The result is shown in Figure 4. 
+
 \section{Conclusion}
 In this project, we used RNNs to perform character-level prediction on real genomes. After confirming that a deep neural network can indeed capture structure within a real genome, we trained a large model for multitask prediction with about 740,000 parameters. We demonstrated that though the RNN takes a while to train, the resulting model outperformed a logistic regression baseline significantly.
 
