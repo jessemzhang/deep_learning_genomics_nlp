@@ -1,9 +1,0 @@
-\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
-\BOOKMARK [1][-]{section.2}{Related work}{}% 2
-\BOOKMARK [1][-]{section.3}{Approach}{}% 3
-\BOOKMARK [1][-]{section.4}{Experiment}{}% 4
-\BOOKMARK [2][-]{subsection.4.1}{Dataset}{section.4}% 5
-\BOOKMARK [2][-]{subsection.4.2}{Character-Level Genome Prediction Results}{section.4}% 6
-\BOOKMARK [2][-]{subsection.4.3}{Multitask Prediction Baseline and Evaluation Metric}{section.4}% 7
-\BOOKMARK [2][-]{subsection.4.4}{Multitask Prediction Results}{section.4}% 8
-\BOOKMARK [1][-]{section.5}{Conclusion}{}% 9
