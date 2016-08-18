@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.models.rnn import rnn_cell
+from tensorflow.python.ops import rnn_cell
 from tensorflow.python.ops import variable_scope as vs
 from tensorflow.python.ops import array_ops
 
@@ -13,7 +13,7 @@ class jzRNNCell(rnn_cell.BasicRNNCell):
   def __call__(self, inputs, state, scope=None):
     """Most basic RNN: output = new_state = tanh(W * input + U * state + B)."""
     with vs.variable_scope(scope or type(self).__name__):  # "BasicRNNCell"            
-      output = self._activation(rnn_cell.linear([inputs, state], self._num_units, True))
+      output = self._activation(rnn_cell._linear([inputs, state], self._num_units, True))
     return output, output
 
 class jzGRUCell(rnn_cell.GRUCell):
@@ -26,11 +26,11 @@ class jzGRUCell(rnn_cell.GRUCell):
     with vs.variable_scope(scope or type(self).__name__):  # "GRUCell"                 
       with vs.variable_scope("Gates"):  # Reset gate and update gate.                  
         # We start with bias of 1.0 to not reset and not update.                       
-        r, u = array_ops.split(1, 2, rnn_cell.linear([inputs, state],
+        r, u = array_ops.split(1, 2, rnn_cell._linear([inputs, state],
                                             2 * self._num_units, True, 1.0))
         r, u = tf.sigmoid(r), tf.sigmoid(u)
       with vs.variable_scope("Candidate"):
-        c = self._activation(rnn_cell.linear([inputs, r * state], self._num_units, True))
+        c = self._activation(rnn_cell._linear([inputs, r * state], self._num_units, True))
       new_h = u * state + (1 - u) * c
     return new_h, new_h
 
@@ -45,7 +45,7 @@ class jzLSTMCell(rnn_cell.BasicLSTMCell):
     with vs.variable_scope(scope or type(self).__name__):  # "BasicLSTMCell"           
       # Parameters of gates are concatenated into one multiply for efficiency.         
       c, h = array_ops.split(1, 2, state)
-      concat = rnn_cell.linear([inputs, h], 4 * self._num_units, True)
+      concat = rnn_cell._linear([inputs, h], 4 * self._num_units, True)
 
       # i = input_gate, j = new_input, f = forget_gate, o = output_gate                
       i, j, f, o = array_ops.split(1, 4, concat)
